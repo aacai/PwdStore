@@ -20,7 +20,7 @@ compose.desktop {
         mainClass = "zhiqiu.app.MainKt"
 
         nativeDistributions {
-            targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
+            targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Exe, TargetFormat.Deb)
             packageName = "zhiqiu.app"
             packageVersion = "1.0.0"
         }
