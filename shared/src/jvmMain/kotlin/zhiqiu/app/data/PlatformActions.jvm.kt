@@ -10,6 +10,7 @@ import java.util.Locale
 import javax.swing.JFileChooser
 import javax.swing.SwingUtilities
 import javax.swing.filechooser.FileNameExtensionFilter
+import zhiqiu.app.i18n.I18n
 
 actual object PlatformFormat {
     private val fmt = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
@@ -30,9 +31,11 @@ actual object PlatformActions {
     }
 
     actual fun pickFile(onResult: (ByteArray?) -> Unit) {
+        val s = I18n.strings
         SwingUtilities.invokeLater {
             val chooser = JFileChooser().apply {
-                fileFilter = FileNameExtensionFilter("备份文件", "json", "pwdbackup", "bin")
+                dialogTitle = s.fileChooserTitle
+                fileFilter = FileNameExtensionFilter(s.fileFilterBackup, "json")
             }
             val result = chooser.showOpenDialog(null)
             if (result == JFileChooser.APPROVE_OPTION) {

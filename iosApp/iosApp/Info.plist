@@ -4,5 +4,7 @@
 <dict>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
+	<key>NSFaceIDUsageDescription</key>
+	<string>PwdStore 使用面容或指纹验证以解锁本地密码库</string>
 </dict>
 </plist>

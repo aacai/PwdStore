@@ -7,6 +7,8 @@ import zhiqiu.app.db.DbProvider
 import zhiqiu.app.db.MetaEntity
 import zhiqiu.app.db.PasswordEntryEntity
 import zhiqiu.app.db.PwdDao
+import zhiqiu.app.i18n.AppLanguage
+import zhiqiu.app.i18n.I18n
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
@@ -26,7 +28,7 @@ class PasswordRepository(
     }
 
     fun setupMasterPassword(password: String) {
-        require(password.length >= 4) { "主密码至少 4 位" }
+        require(password.length >= 4) { I18n.strings.errPasswordShort }
         val salt = Crypto.randomBytes(Crypto.SALT_BYTES)
         val key = Crypto.deriveKey(password, salt)
         val meta = MasterMeta(
@@ -53,8 +55,8 @@ class PasswordRepository(
     }
 
     fun changeMasterPassword(current: String, newPassword: String) {
-        require(newPassword.length >= 4) { "主密码至少 4 位" }
-        require(session.masterPassword == current) { "当前密码不正确" }
+        require(newPassword.length >= 4) { I18n.strings.errPasswordShort }
+        require(session.masterPassword == current) { I18n.strings.errCurrentPassword }
         val entries = getAllDecrypted()
         val salt = Crypto.randomBytes(Crypto.SALT_BYTES)
         val newKey = Crypto.deriveKey(newPassword, salt)
@@ -103,7 +105,7 @@ class PasswordRepository(
         return try {
             decryptEntry(raw, session.requireKey())
         } catch (_: Exception) {
-            raw.copy(password = "需要主密码才能查看")
+            raw.copy(password = I18n.strings.needMasterToView)
         }
     }
 
@@ -263,6 +265,17 @@ class PasswordRepository(
         db { upsertMeta(MetaEntity(MetaKeys.THEME, mode.name)) }
     }
 
+    fun readLanguage(): AppLanguage {
+        val raw = db { getMeta(MetaKeys.LANGUAGE) } ?: return AppLanguage.SYSTEM
+        return AppLanguage.entries.find { it.name == raw } ?: AppLanguage.SYSTEM
+    }
+
+    fun writeLanguage(language: AppLanguage) {
+        db { upsertMeta(MetaEntity(MetaKeys.LANGUAGE, language.name)) }
+    }
+
+    fun biometricEnabled(): Boolean = readAuthConfig().biometricEnabled
+
     fun readGeneratorPrefs(): GeneratorPrefs {
         val raw = db { getMeta(MetaKeys.GENERATOR) } ?: return GeneratorPrefs()
         return runCatching { JsonX.json.decodeFromString(GeneratorPrefs.serializer(), raw) }
@@ -377,7 +390,7 @@ object PasswordGenerator {
             if (prefs.digits) append(DIGITS)
             if (prefs.symbols) append(SYMBOLS)
         }
-        if (pool.isEmpty()) return "请至少选择一种字符类型"
+        if (pool.isEmpty()) return I18n.strings.errNoCharType
         val length = prefs.length.coerceIn(4, 20)
         val bytes = Crypto.randomBytes(length)
         val sb = StringBuilder(length)

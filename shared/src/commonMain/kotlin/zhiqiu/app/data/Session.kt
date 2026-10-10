@@ -1,6 +1,7 @@
 package zhiqiu.app.data
 
 import kotlinx.serialization.json.Json
+import zhiqiu.app.i18n.I18n
 
 object JsonX {
     val json = Json {
@@ -20,6 +21,7 @@ object MetaKeys {
     const val AUTH_TS = "auth_timestamp"
     const val ENC_MASTER = "encrypted_master"
     const val THEME = "theme"
+    const val LANGUAGE = "language"
     const val GENERATOR = "generator"
 }
 
@@ -46,7 +48,7 @@ class Session {
         encryptionKey = null
     }
 
-    fun requireKey(): ByteArray = encryptionKey ?: error("未解锁")
+    fun requireKey(): ByteArray = encryptionKey ?: error(I18n.strings.notUnlocked)
 }
 
 object AppSession {

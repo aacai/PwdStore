@@ -24,6 +24,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -36,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import zhiqiu.app.data.PasswordCategory
 import zhiqiu.app.data.PasswordEntry
 import zhiqiu.app.data.PasswordRepository
+import zhiqiu.app.i18n.I18n
 import zhiqiu.app.ui.components.AppIcon
 import zhiqiu.app.ui.components.AppIcons
 import zhiqiu.app.ui.components.EntryListCard
@@ -52,6 +54,7 @@ fun HomeScreen(
     onAdd: () -> Unit,
     onToggleTheme: () -> Unit,
 ) {
+    val s = I18n.strings
     var entries by remember { mutableStateOf<List<PasswordEntry>>(emptyList()) }
     var error by remember { mutableStateOf<String?>(null) }
     var query by remember { mutableStateOf("") }
@@ -59,7 +62,7 @@ fun HomeScreen(
 
     fun reload() {
         runCatching { entries = repo.getAllDecrypted(); error = null }
-            .onFailure { error = it.message ?: "加载失败" }
+            .onFailure { error = it.message ?: s.loadFailed }
     }
 
     LaunchedEffect(refreshKey) { reload() }
@@ -80,9 +83,9 @@ fun HomeScreen(
             TopAppBar(
                 title = {
                     Column {
-                        Text("密码库")
+                        Text(s.vault)
                         Text(
-                            "${entries.size} 条记录",
+                            s.recordCount(entries.size),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -90,8 +93,11 @@ fun HomeScreen(
                 },
                 actions = {
                     IconButton(onClick = onToggleTheme) { ThemeToggleIcon() }
-                    IconButton(onClick = onOpenSettings) { AppIcon(AppIcons.Settings, "设置") }
+                    IconButton(onClick = onOpenSettings) { AppIcon(AppIcons.Settings, s.cdSettings) }
                 },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background,
+                ),
             )
         },
         floatingActionButton = {
@@ -100,32 +106,35 @@ fun HomeScreen(
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary,
                 shape = MaterialTheme.shapes.large,
-            ) { AppIcon(AppIcons.Add, "添加") }
+            ) { AppIcon(AppIcons.Add, s.cdAdd) }
         },
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp)) {
             OutlinedTextField(
                 value = query,
                 onValueChange = { query = it },
-                label = { Text("搜索名称/用户名") },
+                label = { Text(s.searchHint) },
                 singleLine = true,
                 leadingIcon = { AppIcon(AppIcons.Search, null) },
                 modifier = Modifier.fillMaxWidth(),
                 shape = MaterialTheme.shapes.medium,
             )
             Spacer(Modifier.height(10.dp))
-            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(
+                Modifier.horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
                 FilterChip(
                     selected = category == null,
                     onClick = { category = null },
-                    label = { Text("全部") },
+                    label = { Text(s.filterAll) },
                     shape = MaterialTheme.shapes.small,
                 )
                 PasswordCategory.entries.forEach { c ->
                     FilterChip(
                         selected = category == c,
                         onClick = { category = if (category == c) null else c },
-                        label = { Text(c.label) },
+                        label = { Text(s.categoryLabel(c)) },
                         shape = MaterialTheme.shapes.small,
                     )
                 }
@@ -139,7 +148,7 @@ fun HomeScreen(
                 ) {
                     Text(error!!)
                     Spacer(Modifier.height(8.dp))
-                    Button(onClick = { reload() }) { Text("重试") }
+                    Button(onClick = { reload() }) { Text(s.retry) }
                 }
                 entries.isEmpty() -> Column(
                     Modifier.fillMaxSize(),
@@ -148,17 +157,17 @@ fun HomeScreen(
                 ) {
                     AppIcon(AppIcons.Key, null, Modifier.size(48.dp), tint = MaterialTheme.colorScheme.primary)
                     Spacer(Modifier.height(12.dp))
-                    Text("还没有添加任何密码", style = MaterialTheme.typography.titleMedium)
-                    Text("点右下角开始添加", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(s.emptyTitle, style = MaterialTheme.typography.titleMedium)
+                    Text(s.emptyHint, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 filtered.isEmpty() -> Column(
                     Modifier.fillMaxSize(),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center,
                 ) {
-                    Text("没有找到匹配的密码")
+                    Text(s.noMatch)
                     Spacer(Modifier.height(8.dp))
-                    Button(onClick = { query = ""; category = null }) { Text("清除筛选") }
+                    Button(onClick = { query = ""; category = null }) { Text(s.clearFilters) }
                 }
                 else -> LazyColumn(
                     verticalArrangement = Arrangement.spacedBy(10.dp),

@@ -1,5 +1,7 @@
 package zhiqiu.app.data
 
+import zhiqiu.app.i18n.I18n
+
 object Crypto {
     const val ITERATIONS = 120_000
     const val KEY_BYTES = 32
@@ -23,12 +25,12 @@ object Crypto {
 
     fun decrypt(payload: String, key: ByteArray): String {
         val raw = decodeBase64(payload)
-        require(raw.size > IV_BYTES + HMAC_BYTES) { "密文过短" }
+        require(raw.size > IV_BYTES + HMAC_BYTES) { I18n.strings.errCipherTooShort }
         val iv = raw.copyOfRange(0, IV_BYTES)
         val mac = raw.copyOfRange(raw.size - HMAC_BYTES, raw.size)
         val cipher = raw.copyOfRange(IV_BYTES, raw.size - HMAC_BYTES)
         val expect = PlatformCrypto.hmacSha256(key, iv + cipher)
-        require(constantTimeEquals(mac, expect)) { "完整性校验失败" }
+        require(constantTimeEquals(mac, expect)) { I18n.strings.errIntegrity }
         return PlatformCrypto.aesCbcDecrypt(cipher, key, iv).decodeToString()
     }
 

@@ -23,6 +23,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -41,6 +42,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import zhiqiu.app.data.BiometricAuth
 import zhiqiu.app.data.PasswordRepository
+import zhiqiu.app.i18n.I18n
 import zhiqiu.app.ui.components.AppIcon
 import zhiqiu.app.ui.components.AppIcons
 import zhiqiu.app.ui.components.HeroLockBadge
@@ -53,6 +55,7 @@ fun SetupMasterPasswordScreen(
     repo: PasswordRepository,
     onDone: () -> Unit,
 ) {
+    val s = I18n.strings
     var password by remember { mutableStateOf("") }
     var confirm by remember { mutableStateOf("") }
     var show1 by remember { mutableStateOf(false) }
@@ -63,8 +66,8 @@ fun SetupMasterPasswordScreen(
 
     fun submit() {
         when {
-            password.length < 4 -> scope.launch { snack.showSnackbar("主密码至少 4 位") }
-            password != confirm -> scope.launch { snack.showSnackbar("两次输入不一致") }
+            password.length < 4 -> scope.launch { snack.showSnackbar(s.errPasswordShort) }
+            password != confirm -> scope.launch { snack.showSnackbar(s.errPasswordMismatch) }
             else -> {
                 loading = true
                 scope.launch {
@@ -72,7 +75,7 @@ fun SetupMasterPasswordScreen(
                         runCatching { repo.setupMasterPassword(password) }.exceptionOrNull()?.message
                     }
                     loading = false
-                    if (err != null) snack.showSnackbar("设置失败: $err")
+                    if (err != null) snack.showSnackbar(s.setupFailedWith(err))
                     else onDone()
                 }
             }
@@ -89,10 +92,10 @@ fun SetupMasterPasswordScreen(
         ) {
             HeroLockBadge()
             Spacer(Modifier.height(20.dp))
-            Text("设置主密码", style = MaterialTheme.typography.headlineSmall)
+            Text(s.setupTitle, style = MaterialTheme.typography.headlineSmall)
             Spacer(Modifier.height(8.dp))
             Text(
-                "主密码用于加密您的所有密码，请妥善保管",
+                s.setupHint,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -101,7 +104,7 @@ fun SetupMasterPasswordScreen(
                 OutlinedTextField(
                     value = password,
                     onValueChange = { password = it },
-                    label = { Text("主密码") },
+                    label = { Text(s.masterPassword) },
                     singleLine = true,
                     leadingIcon = { AppIcon(AppIcons.Lock, null) },
                     visualTransformation = if (show1) VisualTransformation.None else PasswordVisualTransformation(),
@@ -114,7 +117,7 @@ fun SetupMasterPasswordScreen(
                 OutlinedTextField(
                     value = confirm,
                     onValueChange = { confirm = it },
-                    label = { Text("确认密码") },
+                    label = { Text(s.confirmPassword) },
                     singleLine = true,
                     leadingIcon = { AppIcon(AppIcons.Lock, null) },
                     visualTransformation = if (show2) VisualTransformation.None else PasswordVisualTransformation(),
@@ -131,7 +134,7 @@ fun SetupMasterPasswordScreen(
                     modifier = Modifier.fillMaxWidth().height(48.dp),
                     shape = MaterialTheme.shapes.medium,
                 ) {
-                    Text(if (loading) "处理中…" else "开始使用")
+                    Text(if (loading) s.processing else s.startUsing)
                 }
             }
         }
@@ -146,6 +149,7 @@ fun UnlockScreen(
     onReset: () -> Unit,
     onToggleTheme: () -> Unit,
 ) {
+    val s = I18n.strings
     var password by remember { mutableStateOf("") }
     var show by remember { mutableStateOf(false) }
     var loading by remember { mutableStateOf(false) }
@@ -154,6 +158,8 @@ fun UnlockScreen(
     val scope = rememberCoroutineScope()
     val bioEnabled = remember { repo.readAuthConfig().biometricEnabled }
     val bioAvailable = remember { BiometricAuth.isAvailable() }
+    val canBio = bioEnabled && bioAvailable
+    var prompted by remember { mutableStateOf(false) }
 
     fun unlockOk() {
         repo.onManualUnlockSuccess()
@@ -162,28 +168,29 @@ fun UnlockScreen(
 
     fun submit() {
         if (password.isBlank()) {
-            scope.launch { snack.showSnackbar("请输入密码") }
+            scope.launch { snack.showSnackbar(s.errEmptyPassword) }
             return
         }
         loading = true
         scope.launch {
             val ok = withContext(Dispatchers.Default) { repo.verifyMasterPassword(password) }
             loading = false
-            if (ok) unlockOk() else snack.showSnackbar("密码错误")
+            if (ok) unlockOk() else snack.showSnackbar(s.errWrongPassword)
         }
     }
 
     fun runBiometric() {
         BiometricAuth.authenticate(
-            title = "解锁 PwdStore",
-            subtitle = "使用指纹或面容验证身份",
+            title = s.unlock,
+            subtitle = s.biometricUnlock,
+            negativeButton = s.biometricUsePassword,
             onSuccess = {
                 scope.launch {
                     val ok = withContext(Dispatchers.Default) { repo.tryBiometricUnlock() }
                     if (ok) {
                         unlockOk()
                     } else {
-                        snack.showSnackbar("生物识别成功，但本地凭证不可用，请输入主密码")
+                        snack.showSnackbar(s.biometricNoCredential)
                     }
                 }
             },
@@ -192,15 +199,21 @@ fun UnlockScreen(
     }
 
     LaunchedEffect(Unit) {
-        if (bioEnabled && bioAvailable) runBiometric()
+        if (canBio && !prompted) {
+            prompted = true
+            runBiometric()
+        }
     }
 
     Scaffold(
         snackbarHost = { SnackbarHost(snack) },
         topBar = {
             TopAppBar(
-                title = { Text("解锁") },
+                title = { Text(s.unlock) },
                 actions = { IconButton(onClick = onToggleTheme) { ThemeToggleIcon() } },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background,
+                ),
             )
         },
     ) { padding ->
@@ -211,9 +224,9 @@ fun UnlockScreen(
         ) {
             HeroLockBadge()
             Spacer(Modifier.height(16.dp))
-            Text("欢迎回来", style = MaterialTheme.typography.headlineSmall)
+            Text(s.welcomeBack, style = MaterialTheme.typography.headlineSmall)
             Text(
-                "输入主密码继续",
+                s.unlockHint,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -222,7 +235,7 @@ fun UnlockScreen(
                 OutlinedTextField(
                     value = password,
                     onValueChange = { password = it },
-                    label = { Text("主密码") },
+                    label = { Text(s.masterPassword) },
                     singleLine = true,
                     leadingIcon = { AppIcon(AppIcons.Lock, null) },
                     visualTransformation = if (show) VisualTransformation.None else PasswordVisualTransformation(),
@@ -238,8 +251,8 @@ fun UnlockScreen(
                     enabled = !loading,
                     modifier = Modifier.fillMaxWidth().height(48.dp),
                     shape = MaterialTheme.shapes.medium,
-                ) { Text("解锁") }
-                if (bioEnabled && bioAvailable) {
+                ) { Text(s.unlock) }
+                if (canBio) {
                     Spacer(Modifier.height(10.dp))
                     FilledTonalButton(
                         onClick = { runBiometric() },
@@ -248,27 +261,27 @@ fun UnlockScreen(
                     ) {
                         AppIcon(AppIcons.Fingerprint, null, Modifier.size(20.dp))
                         Spacer(Modifier.size(8.dp))
-                        Text("指纹 / 面容解锁")
+                        Text(s.biometricUnlock)
                     }
                 }
             }
             Spacer(Modifier.height(8.dp))
-            TextButton(onClick = { confirmReset = 1 }) { Text("忘记密码？") }
+            TextButton(onClick = { confirmReset = 1 }) { Text(s.forgotPassword) }
         }
     }
 
     if (confirmReset == 1) {
         ConfirmDialog(
-            title = "重置主密码？",
-            text = "重置会删除所有密码数据，不可恢复。若只想改主密码，请登录后到设置页修改。",
+            title = s.resetTitle,
+            text = s.resetText,
             onDismiss = { confirmReset = 0 },
             onConfirm = { confirmReset = 2 },
         )
     }
     if (confirmReset == 2) {
         ConfirmDialog(
-            title = "再次确认",
-            text = "此操作无法撤销，确定删除全部数据？",
+            title = s.resetConfirmTitle,
+            text = s.resetConfirmText,
             onDismiss = { confirmReset = 0 },
             onConfirm = {
                 repo.resetAll()
@@ -286,12 +299,13 @@ fun ConfirmDialog(
     onDismiss: () -> Unit,
     onConfirm: () -> Unit,
 ) {
+    val s = I18n.strings
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
         text = { Text(text) },
-        confirmButton = { TextButton(onClick = onConfirm) { Text("确定") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("取消") } },
+        confirmButton = { TextButton(onClick = onConfirm) { Text(s.ok) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(s.cancel) } },
         shape = MaterialTheme.shapes.large,
     )
 }

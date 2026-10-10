@@ -21,6 +21,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -34,6 +35,7 @@ import kotlinx.coroutines.launch
 import zhiqiu.app.data.BackupManager
 import zhiqiu.app.data.PasswordRepository
 import zhiqiu.app.data.PlatformActions
+import zhiqiu.app.i18n.I18n
 import zhiqiu.app.ui.components.AppIcon
 import zhiqiu.app.ui.components.AppIcons
 import zhiqiu.app.ui.components.IconGlyph
@@ -48,6 +50,7 @@ fun DetailScreen(
     onEdit: () -> Unit,
     onDeleted: () -> Unit,
 ) {
+    val s = I18n.strings
     val entry = remember(id) { repo.getById(id) }
     var showPwd by remember { mutableStateOf(false) }
     var showAllHistory by remember { mutableStateOf(false) }
@@ -56,16 +59,25 @@ fun DetailScreen(
     val scope = rememberCoroutineScope()
 
     if (entry == null) {
-        Scaffold(topBar = {
-            TopAppBar(
-                title = { Text("详情") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) { AppIcon(AppIcons.Back, "返回") }
-                },
-            )
-        }) { padding ->
-            Column(Modifier.fillMaxSize().padding(padding), horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("密码不存在")
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = { Text(s.detail) },
+                    navigationIcon = {
+                        IconButton(onClick = onBack) { AppIcon(AppIcons.Back, s.cdBack) }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.background,
+                    ),
+                )
+            },
+        ) { padding ->
+            Column(
+                Modifier.fillMaxSize().padding(padding),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+            ) {
+                Text(s.entryMissing)
             }
         }
         return
@@ -78,14 +90,17 @@ fun DetailScreen(
         snackbarHost = { SnackbarHost(snack) },
         topBar = {
             TopAppBar(
-                title = { Text("详情") },
+                title = { Text(s.detail) },
                 navigationIcon = {
-                    IconButton(onClick = onBack) { AppIcon(AppIcons.Back, "返回") }
+                    IconButton(onClick = onBack) { AppIcon(AppIcons.Back, s.cdBack) }
                 },
                 actions = {
-                    IconButton(onClick = onEdit) { AppIcon(AppIcons.Edit, "编辑") }
-                    IconButton(onClick = { confirmDelete = 1 }) { AppIcon(AppIcons.Delete, "删除") }
+                    IconButton(onClick = onEdit) { AppIcon(AppIcons.Edit, s.cdEdit) }
+                    IconButton(onClick = { confirmDelete = 1 }) { AppIcon(AppIcons.Delete, s.cdDelete) }
                 },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background,
+                ),
             )
         },
     ) { padding ->
@@ -101,34 +116,37 @@ fun DetailScreen(
                 Spacer(Modifier.padding(8.dp))
                 Column {
                     Text(entry.title, style = MaterialTheme.typography.headlineSmall)
-                    Text(entry.categoryEnum().label, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(
+                        s.categoryLabel(entry.categoryEnum()),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
             }
             Spacer(Modifier.height(16.dp))
-            FieldRow("用户名", entry.username, copyable = true, snack = snack, scope = scope)
+            FieldRow(s.username, entry.username, copyable = true, snack = snack, scope = scope)
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.weight(1f)) {
-                    Text("密码", style = MaterialTheme.typography.labelMedium)
+                    Text(s.password, style = MaterialTheme.typography.labelMedium)
                     SelectionContainer {
-                        Text(if (showPwd) entry.password else "••••••••")
+                        Text(if (showPwd) entry.password else s.masked)
                     }
                 }
                 PasswordVisibilityToggle(showPwd) { showPwd = !showPwd }
                 IconButton(onClick = {
                     PlatformActions.copyToClipboard(entry.password)
-                    scope.launch { snack.showSnackbar("已复制") }
-                }) { AppIcon(AppIcons.Copy, "复制") }
+                    scope.launch { snack.showSnackbar(s.copied) }
+                }) { AppIcon(AppIcons.Copy, s.cdCopy) }
             }
             Spacer(Modifier.height(12.dp))
-            Text("分类: ${entry.categoryEnum().label}")
-            Text("创建时间: ${BackupManager.formatDateTime(entry.createdAt)}")
+            Text("${s.category}: ${s.categoryLabel(entry.categoryEnum())}")
+            Text("${s.created}: ${BackupManager.formatDateTime(entry.createdAt)}")
             if (entry.notes.isNotBlank()) {
                 Spacer(Modifier.height(8.dp))
-                FieldRow("备注", entry.notes, copyable = true, snack = snack, scope = scope)
+                FieldRow(s.notes, entry.notes, copyable = true, snack = snack, scope = scope)
             }
             if (history.isNotEmpty()) {
                 Spacer(Modifier.height(16.dp))
-                Text("历史密码 (${history.size})", style = MaterialTheme.typography.titleMedium)
+                Text(s.historyCount(history.size), style = MaterialTheme.typography.titleMedium)
                 visibleHistory.forEach { h ->
                     Row(
                         Modifier.fillMaxWidth().padding(vertical = 4.dp),
@@ -136,7 +154,7 @@ fun DetailScreen(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Column(Modifier.weight(1f)) {
-                            Text("••••••••")
+                            Text(s.masked)
                             Text(
                                 BackupManager.formatDateTime(h.changedAt),
                                 style = MaterialTheme.typography.bodySmall,
@@ -144,13 +162,13 @@ fun DetailScreen(
                         }
                         IconButton(onClick = {
                             PlatformActions.copyToClipboard(h.password)
-                            scope.launch { snack.showSnackbar("已复制") }
-                        }) { AppIcon(AppIcons.Copy, "复制") }
+                            scope.launch { snack.showSnackbar(s.copied) }
+                        }) { AppIcon(AppIcons.Copy, s.cdCopy) }
                     }
                 }
                 if (history.size > 3 && !showAllHistory) {
                     TextButton(onClick = { showAllHistory = true }) {
-                        Text("查看全部 ${history.size} 个")
+                        Text(s.viewAllHistory(history.size))
                     }
                 }
             }
@@ -159,16 +177,16 @@ fun DetailScreen(
 
     if (confirmDelete == 1) {
         ConfirmDialog(
-            title = "删除条目？",
-            text = "此操作无法撤销",
+            title = s.deleteTitle,
+            text = s.irreversible,
             onDismiss = { confirmDelete = 0 },
             onConfirm = { confirmDelete = 2 },
         )
     }
     if (confirmDelete == 2) {
         ConfirmDialog(
-            title = "再次确认",
-            text = "确定删除「${entry.title}」？",
+            title = s.resetConfirmTitle,
+            text = s.confirmDeleteEntry(entry.title),
             onDismiss = { confirmDelete = 0 },
             onConfirm = {
                 repo.delete(entry.id)
@@ -186,6 +204,7 @@ private fun FieldRow(
     snack: SnackbarHostState,
     scope: kotlinx.coroutines.CoroutineScope,
 ) {
+    val s = I18n.strings
     Row(
         Modifier.fillMaxWidth().padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -197,8 +216,8 @@ private fun FieldRow(
         if (copyable) {
             IconButton(onClick = {
                 PlatformActions.copyToClipboard(value)
-                scope.launch { snack.showSnackbar("已复制") }
-            }) { AppIcon(AppIcons.Copy, "复制") }
+                scope.launch { snack.showSnackbar(s.copied) }
+            }) { AppIcon(AppIcons.Copy, s.cdCopy) }
         }
     }
 }

@@ -18,6 +18,7 @@ import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Key
+import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.Palette
@@ -49,6 +50,8 @@ import compose.icons.fontawesomeicons.brands.Weixin
 import compose.icons.fontawesomeicons.brands.XTwitter
 import compose.icons.fontawesomeicons.brands.Zhihu
 
+import zhiqiu.app.i18n.I18n
+
 object AppIcons {
     val Back = Icons.AutoMirrored.Filled.ArrowBack
     val Add = Icons.Filled.Add
@@ -74,6 +77,7 @@ object AppIcons {
     val Info = Icons.Filled.Info
     val Palette = Icons.Filled.Palette
     val Fingerprint = Icons.Filled.Fingerprint
+    val Language = Icons.Filled.Language
     val Login = Icons.AutoMirrored.Filled.Login
     val Logout = Icons.AutoMirrored.Filled.Logout
 
@@ -115,17 +119,18 @@ fun PasswordVisibilityToggle(
     modifier: Modifier = Modifier,
     onToggle: () -> Unit,
 ) {
+    val s = I18n.strings
     IconButton(onClick = onToggle, modifier = modifier) {
         AppIcon(
             imageVector = if (visible) AppIcons.VisibilityOff else AppIcons.Visibility,
-            contentDescription = if (visible) "隐藏密码" else "显示密码",
+            contentDescription = if (visible) s.cdHidePassword else s.cdShowPassword,
         )
     }
 }
 
 @Composable
 fun ThemeToggleIcon() {
-    AppIcon(AppIcons.Theme, "切换主题")
+    AppIcon(AppIcons.Theme, I18n.strings.cdTheme)
 }
 
 @Composable

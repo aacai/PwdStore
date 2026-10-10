@@ -11,6 +11,7 @@ import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import zhiqiu.app.i18n.I18n
 
 object AndroidBridge {
     lateinit var appContext: Context
@@ -53,7 +54,7 @@ actual object PlatformActions {
         }
         runCatching {
             context.startActivity(
-                Intent.createChooser(intent, "分享文件").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                Intent.createChooser(intent, I18n.strings.shareFile).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
             )
         }
     }

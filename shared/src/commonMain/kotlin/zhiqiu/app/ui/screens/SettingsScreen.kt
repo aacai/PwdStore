@@ -1,6 +1,7 @@
 package zhiqiu.app.ui.screens
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -12,11 +13,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.ListItem
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
@@ -27,6 +26,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -43,30 +43,39 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import zhiqiu.app.data.AppSession
-import zhiqiu.app.data.BiometricAuth
+import zhiqiu.app.data.AuthConfig
 import zhiqiu.app.data.BackupManager
 import zhiqiu.app.data.BackupPayload
+import zhiqiu.app.data.BiometricAuth
 import zhiqiu.app.data.FileIo
 import zhiqiu.app.data.PasswordRepository
 import zhiqiu.app.data.PlatformActions
 import zhiqiu.app.data.StoreFiles
 import zhiqiu.app.data.ThemeMode
+import zhiqiu.app.i18n.AppLanguage
+import zhiqiu.app.i18n.I18n
 import zhiqiu.app.ui.components.AppIcon
 import zhiqiu.app.ui.components.AppIcons
 import zhiqiu.app.ui.components.PasswordVisibilityToggle
+import zhiqiu.app.ui.components.SettingRow
+import zhiqiu.app.ui.components.SettingsSection
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     repo: PasswordRepository,
     themeMode: ThemeMode,
+    language: AppLanguage,
     onThemeChanged: (ThemeMode) -> Unit,
+    onLanguageChanged: (AppLanguage) -> Unit,
     onBack: () -> Unit,
     onLocked: () -> Unit,
     onListChanged: () -> Unit,
 ) {
+    val s = I18n.strings
     var auth by remember { mutableStateOf(repo.readAuthConfig()) }
     var themeDialog by remember { mutableStateOf(false) }
+    var languageDialog by remember { mutableStateOf(false) }
     var changePwd by remember { mutableStateOf(false) }
     var exportPreview by remember { mutableStateOf<String?>(null) }
     var importPreview by remember { mutableStateOf<BackupPayload?>(null) }
@@ -76,15 +85,25 @@ fun SettingsScreen(
     var aboutDialog by remember { mutableStateOf(false) }
     val snack = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    val hardware = remember { BiometricAuth.hardwareSupported() }
+    val bioReady = remember { BiometricAuth.isAvailable() }
+
+    fun save(config: AuthConfig) {
+        auth = config
+        repo.writeAuthConfig(config)
+    }
 
     Scaffold(
         snackbarHost = { SnackbarHost(snack) },
         topBar = {
             TopAppBar(
-                title = { Text("设置") },
-                navigationIcon = { IconButton(onClick = onBack) { AppIcon(AppIcons.Back, "返回") } },
-                colors = androidx.compose.material3.TopAppBarDefaults.topAppBarColors(
-                            ),
+                title = { Text(s.settings) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) { AppIcon(AppIcons.Back, s.cdBack) }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background,
+                ),
             )
         },
     ) { padding ->
@@ -92,192 +111,209 @@ fun SettingsScreen(
             Modifier
                 .fillMaxSize()
                 .padding(padding)
+                .padding(horizontal = 16.dp)
+                .padding(bottom = 24.dp)
                 .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(18.dp),
         ) {
-            SectionTitle("安全设置")
-            ListItem(
-                leadingContent = { AppIcon(AppIcons.Password, null) },
-                headlineContent = { Text("修改主密码") },
-                modifier = Modifier.clickable { changePwd = true },
-            )
-            ListItem(
-                leadingContent = { AppIcon(AppIcons.LockOpen, null) },
-                headlineContent = { Text("免密登录") },
-                supportingContent = {
-                    Text("时长 ${(auth.duration / 24).let { d -> if (d == d.toInt().toDouble()) "${d.toInt()}" else "$d" }} 天")
-                },
-                trailingContent = {
-                    Switch(
-                        checked = auth.enabled,
-                        onCheckedChange = {
-                            auth = auth.copy(enabled = it)
-                            repo.writeAuthConfig(auth)
-                        },
-                    )
-                },
-            )
-            if (auth.enabled) {
-                Text("免密时长（天）", Modifier.padding(horizontal = 16.dp))
-                Slider(
-                    value = (auth.duration / 24).toFloat().coerceIn(0.5f, 7f),
-                    onValueChange = {
-                        val days = (it * 2).toInt() / 2f
-                        auth = auth.copy(duration = days * 24.0)
-                        repo.writeAuthConfig(auth)
+            SettingsSection(s.sectionSecurity) {
+                SettingRow(
+                    icon = AppIcons.Password,
+                    title = s.changeMasterPassword,
+                    onClick = { changePwd = true },
+                )
+                SettingRow(
+                    icon = AppIcons.LockOpen,
+                    title = s.passwordFree,
+                    subtitle = if (auth.enabled) s.daysOf(daysText(auth.duration)) else null,
+                    trailing = {
+                        Switch(
+                            checked = auth.enabled,
+                            onCheckedChange = { save(auth.copy(enabled = it)) },
+                        )
                     },
-                    valueRange = 0.5f..7f,
-                    steps = 12,
-                    modifier = Modifier.padding(horizontal = 16.dp),
+                    extra = {
+                        if (auth.enabled) {
+                            Column(Modifier.padding(start = 48.dp, end = 12.dp, bottom = 10.dp)) {
+                                Text(
+                                    s.passwordFreeDuration,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                                Slider(
+                                    value = (auth.duration / 24).toFloat().coerceIn(0.5f, 7f),
+                                    onValueChange = { save(auth.copy(duration = (it * 2).toInt() / 2f * 24.0)) },
+                                    valueRange = 0.5f..7f,
+                                    steps = 12,
+                                )
+                            }
+                        }
+                    },
+                )
+                SettingRow(
+                    icon = AppIcons.Fingerprint,
+                    title = s.biometricUnlockRow,
+                    subtitle = when {
+                        !hardware -> s.biometricNoHardware
+                        !bioReady -> s.biometricEnrollHint
+                        auth.biometricEnabled -> s.biometricOn
+                        else -> s.biometricOff
+                    },
+                    trailing = {
+                        Switch(
+                            checked = auth.biometricEnabled,
+                            enabled = bioReady,
+                            onCheckedChange = { enabled ->
+                                if (enabled) {
+                                    BiometricAuth.authenticate(
+                                        title = s.biometricSetupTitle,
+                                        subtitle = s.biometricSetupSubtitle,
+                                        negativeButton = s.biometricUsePassword,
+                                        onSuccess = { save(auth.copy(biometricEnabled = true)) },
+                                        onError = { msg -> scope.launch { snack.showSnackbar(msg) } },
+                                    )
+                                } else {
+                                    save(auth.copy(biometricEnabled = false))
+                                }
+                            },
+                        )
+                    },
+                )
+                SettingRow(
+                    icon = AppIcons.Logout,
+                    title = s.lockNow,
+                    divider = false,
+                    onClick = {
+                        repo.lockNow()
+                        onLocked()
+                    },
                 )
             }
-            ListItem(
-                leadingContent = { AppIcon(AppIcons.Fingerprint, null) },
-                headlineContent = { Text("生物识别解锁") },
-                supportingContent = {
-                    Text(
-                        when {
-                            !BiometricAuth.isAvailable() -> "当前设备不支持或未录入指纹/面容"
-                            auth.biometricEnabled -> "已开启，解锁页可使用指纹/面容"
-                            else -> "开启后可用指纹或面容快速解锁"
-                        }
-                    )
-                },
-                trailingContent = {
-                    Switch(
-                        checked = auth.biometricEnabled,
-                        enabled = BiometricAuth.isAvailable(),
-                        onCheckedChange = { enabled ->
-                            if (enabled) {
-                                BiometricAuth.authenticate(
-                                    title = "确认开启生物识别",
-                                    subtitle = "验证后即可用指纹/面容解锁",
-                                    onSuccess = {
-                                        auth = auth.copy(biometricEnabled = true)
-                                        repo.writeAuthConfig(auth)
-                                    },
-                                    onError = { msg -> scope.launch { snack.showSnackbar(msg) } },
-                                )
-                            } else {
-                                auth = auth.copy(biometricEnabled = false)
-                                repo.writeAuthConfig(auth)
-                            }
-                        },
-                    )
-                },
-            )
-            ListItem(
-                leadingContent = { AppIcon(AppIcons.Logout, null) },
-                headlineContent = { Text("立即锁定") },
-                modifier = Modifier.clickable {
-                    repo.lockNow()
-                    onLocked()
-                },
-            )
-            HorizontalDivider()
-            SectionTitle("显示设置")
-            ListItem(
-                leadingContent = { AppIcon(AppIcons.Palette, null) },
-                headlineContent = { Text("主题") },
-                trailingContent = { Text(themeMode.label) },
-                modifier = Modifier.clickable { themeDialog = true },
-            )
-            HorizontalDivider()
-            SectionTitle("数据管理")
-            ListItem(
-                leadingContent = { AppIcon(AppIcons.Export, null) },
-                headlineContent = { Text("导出数据（TXT）") },
-                modifier = Modifier.clickable {
-                    val list = repo.getAllDecrypted()
-                    if (list.isEmpty()) scope.launch { snack.showSnackbar("暂无密码数据可导出") }
-                    else exportPreview = BackupManager.exportTxt(list)
-                },
-            )
-            ListItem(
-                leadingContent = { AppIcon(AppIcons.Backup, null) },
-                headlineContent = { Text("加密备份") },
-                modifier = Modifier.clickable {
-                    val pwd = AppSession.session.masterPassword
-                    if (pwd == null) {
-                        scope.launch { snack.showSnackbar("请先设置主密码") }
-                        return@clickable
-                    }
-                    scope.launch {
-                        runCatching {
-                            val bytes = withContext(Dispatchers.Default) {
-                                BackupManager.createEncryptedBackup(repo.getAllDecrypted(), pwd)
-                            }
-                            val name = BackupManager.backupFileName()
-                            val path = FileIo.join(repo.documentsPath(), name)
-                            FileIo.writeBytes(path, bytes)
-                            PlatformActions.shareOrRevealFile(path, "application/json")
-                            snack.showSnackbar("备份已保存: $name")
-                        }.onFailure { snack.showSnackbar(it.message ?: "备份失败") }
-                    }
-                },
-            )
-            ListItem(
-                leadingContent = { AppIcon(AppIcons.Import, null) },
-                headlineContent = { Text("导入数据") },
-                modifier = Modifier.clickable {
-                    PlatformActions.pickFile { bytes ->
-                        if (bytes == null) {
-                            scope.launch { snack.showSnackbar("未选择文件") }
+
+            SettingsSection(s.sectionDisplay) {
+                SettingRow(
+                    icon = AppIcons.Palette,
+                    title = s.theme,
+                    trailing = { ValueText(s.themeLabel(themeMode)) },
+                    onClick = { themeDialog = true },
+                )
+                SettingRow(
+                    icon = AppIcons.Language,
+                    title = s.language,
+                    divider = false,
+                    trailing = { ValueText(s.languageLabel(language)) },
+                    onClick = { languageDialog = true },
+                )
+            }
+
+            SettingsSection(s.sectionData) {
+                SettingRow(
+                    icon = AppIcons.Export,
+                    title = s.exportTxt,
+                    onClick = {
+                        val list = repo.getAllDecrypted()
+                        if (list.isEmpty()) {
+                            scope.launch { snack.showSnackbar(s.nothingToExport) }
                         } else {
-                            pendingImportBytes = bytes
-                            importAskPwd = true
+                            exportPreview = BackupManager.exportTxt(list)
                         }
-                    }
-                },
-            )
-            ListItem(
-                leadingContent = { AppIcon(AppIcons.Folder, null) },
-                headlineContent = { Text("存储详情") },
-                modifier = Modifier.clickable { storageDialog = true },
-            )
-            HorizontalDivider()
-            SectionTitle("关于")
-            ListItem(
-                leadingContent = { AppIcon(AppIcons.Info, null) },
-                headlineContent = { Text("关于应用") },
-                modifier = Modifier.clickable { aboutDialog = true },
-            )
+                    },
+                )
+                SettingRow(
+                    icon = AppIcons.Backup,
+                    title = s.encryptedBackup,
+                    onClick = {
+                        val pwd = AppSession.session.masterPassword
+                        if (pwd == null) {
+                            scope.launch { snack.showSnackbar(s.setMasterFirst) }
+                        } else {
+                            scope.launch {
+                                runCatching {
+                                    val bytes = withContext(Dispatchers.Default) {
+                                        BackupManager.createEncryptedBackup(repo.getAllDecrypted(), pwd)
+                                    }
+                                    val name = BackupManager.backupFileName()
+                                    FileIo.writeBytes(FileIo.join(repo.documentsPath(), name), bytes)
+                                    PlatformActions.shareOrRevealFile(
+                                        FileIo.join(repo.documentsPath(), name),
+                                        "application/json",
+                                    )
+                                    snack.showSnackbar(s.backupSavedTo(name))
+                                }.onFailure { snack.showSnackbar(it.message ?: s.backupFailed) }
+                            }
+                        }
+                    },
+                )
+                SettingRow(
+                    icon = AppIcons.Import,
+                    title = s.importData,
+                    onClick = {
+                        PlatformActions.pickFile { bytes ->
+                            if (bytes == null) {
+                                scope.launch { snack.showSnackbar(s.noFilePicked) }
+                            } else {
+                                pendingImportBytes = bytes
+                                importAskPwd = true
+                            }
+                        }
+                    },
+                )
+                SettingRow(
+                    icon = AppIcons.Folder,
+                    title = s.storageDetails,
+                    divider = false,
+                    onClick = { storageDialog = true },
+                )
+            }
+
+            SettingsSection(s.sectionAbout) {
+                SettingRow(
+                    icon = AppIcons.Info,
+                    title = s.aboutApp,
+                    divider = false,
+                    trailing = { ValueText(s.appVersion) },
+                    onClick = { aboutDialog = true },
+                )
+            }
         }
     }
 
     if (themeDialog) {
-        var temp by remember(themeDialog) { mutableStateOf(themeMode) }
-        AlertDialog(
-            onDismissRequest = { themeDialog = false },
-            title = { Text("主题") },
-            text = {
-                Column {
-                    ThemeMode.entries.forEach { m ->
-                        Row(
-                            Modifier.fillMaxWidth().clickable { temp = m }.padding(8.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            RadioButton(selected = temp == m, onClick = { temp = m })
-                            Text(m.label)
-                        }
-                    }
-                }
+        ChoiceDialog(
+            title = s.theme,
+            options = ThemeMode.entries.toList(),
+            selected = themeMode,
+            labelOf = { s.themeLabel(it) },
+            onSelect = {
+                onThemeChanged(it)
+                themeDialog = false
             },
-            confirmButton = {
-                TextButton(onClick = {
-                    onThemeChanged(temp)
-                    themeDialog = false
-                }) { Text("确定") }
-            },
-            dismissButton = { TextButton(onClick = { themeDialog = false }) { Text("取消") } },
+            onDismiss = { themeDialog = false },
         )
     }
 
-    if (changePwd) ChangeMasterPasswordDialog(repo, snack) { changePwd = false }
+    if (languageDialog) {
+        ChoiceDialog(
+            title = s.language,
+            options = AppLanguage.entries.toList(),
+            selected = language,
+            labelOf = { s.languageLabel(it) },
+            onSelect = {
+                onLanguageChanged(it)
+                languageDialog = false
+            },
+            onDismiss = { languageDialog = false },
+        )
+    }
+
+    if (changePwd) {
+        ChangeMasterPasswordDialog(repo, snack) { changePwd = false }
+    }
 
     exportPreview?.let { text ->
         AlertDialog(
             onDismissRequest = { exportPreview = null },
-            title = { Text("导出预览") },
+            title = { Text(s.exportPreview) },
             text = {
                 SelectionContainer {
                     Text(text, fontFamily = FontFamily.Monospace)
@@ -290,10 +326,12 @@ fun SettingsScreen(
                     FileIo.writeText(path, text)
                     PlatformActions.shareOrRevealFile(path, "text/plain")
                     exportPreview = null
-                    scope.launch { snack.showSnackbar("已导出: $name") }
-                }) { Text("确认导出") }
+                    scope.launch { snack.showSnackbar(s.exportedTo(name)) }
+                }) { Text(s.confirmExport) }
             },
-            dismissButton = { TextButton(onClick = { exportPreview = null }) { Text("取消") } },
+            dismissButton = {
+                TextButton(onClick = { exportPreview = null }) { Text(s.cancel) }
+            },
         )
     }
 
@@ -303,13 +341,14 @@ fun SettingsScreen(
         var parsing by remember { mutableStateOf(false) }
         AlertDialog(
             onDismissRequest = { if (!parsing) importAskPwd = false },
-            title = { Text("输入备份密码") },
+            title = { Text(s.backupPasswordTitle) },
             text = {
                 OutlinedTextField(
                     value = pwd,
                     onValueChange = { pwd = it },
-                    label = { Text("备份时的主密码") },
+                    label = { Text(s.backupPasswordHint) },
                     enabled = !parsing,
+                    singleLine = true,
                     visualTransformation = if (show) VisualTransformation.None else PasswordVisualTransformation(),
                     trailingIcon = { PasswordVisibilityToggle(show) { show = !show } },
                 )
@@ -330,12 +369,12 @@ fun SettingsScreen(
                                 importAskPwd = false
                                 pendingImportBytes = null
                             }.onFailure {
-                                snack.showSnackbar(it.message ?: "解析失败")
+                                snack.showSnackbar(it.message ?: s.parseFailed)
                             }
                             parsing = false
                         }
                     },
-                ) { Text(if (parsing) "解析中…" else "解析") }
+                ) { Text(if (parsing) s.parsing else s.parse) }
             },
             dismissButton = {
                 TextButton(
@@ -344,7 +383,7 @@ fun SettingsScreen(
                         importAskPwd = false
                         pendingImportBytes = null
                     },
-                ) { Text("取消") }
+                ) { Text(s.cancel) }
             },
         )
     }
@@ -353,18 +392,18 @@ fun SettingsScreen(
         var importing by remember { mutableStateOf(false) }
         AlertDialog(
             onDismissRequest = { if (!importing) importPreview = null },
-            title = { Text("导入预览") },
+            title = { Text(s.importPreview) },
             text = {
                 Column(Modifier.verticalScroll(rememberScrollState())) {
-                    Text("版本: ${payload.version}")
-                    Text("时间: ${BackupManager.formatDateTime(payload.timestamp)}")
-                    Text("条数: ${payload.entryCount}")
+                    Text("${s.version}: ${payload.version}")
+                    Text("${s.time}: ${BackupManager.formatDateTime(payload.timestamp)}")
+                    Text("${s.entryCount}: ${payload.entryCount}")
                     Spacer(Modifier.height(8.dp))
                     payload.entries.take(5).forEach { e ->
                         Text("• ${e.title} / ${e.username}")
                     }
                     if (payload.entries.size > 5) {
-                        Text("… 还有 ${payload.entries.size - 5} 条")
+                        Text(s.moreEntries(payload.entries.size - 5))
                     }
                 }
             },
@@ -379,10 +418,10 @@ fun SettingsScreen(
                             }
                             importPreview = null
                             onListChanged()
-                            snack.showSnackbar("已导入 $n 条")
+                            snack.showSnackbar(s.importedCount(n))
                         }
                     },
-                ) { Text(if (importing) "导入中…" else "导入数据") }
+                ) { Text(if (importing) s.importing else s.import) }
             },
             dismissButton = {
                 Row {
@@ -393,13 +432,13 @@ fun SettingsScreen(
                                 "${it.title}\t${it.username}\t${it.password}"
                             }
                             PlatformActions.copyToClipboard(full)
-                            scope.launch { snack.showSnackbar("已复制完整数据") }
+                            scope.launch { snack.showSnackbar(s.copiedFullData) }
                         },
-                    ) { Text("复制完整数据") }
+                    ) { Text(s.copyFullData) }
                     TextButton(
                         enabled = !importing,
                         onClick = { importPreview = null },
-                    ) { Text("关闭") }
+                    ) { Text(s.close) }
                 }
             },
         )
@@ -408,37 +447,80 @@ fun SettingsScreen(
     if (storageDialog) {
         AlertDialog(
             onDismissRequest = { storageDialog = false },
-            title = { Text("存储详情") },
+            title = { Text(s.storageDetails) },
             text = {
                 SelectionContainer {
-                    Text(
-                        """
-                        目录: ${repo.documentsPath()}
-                        数据库: ${StoreFiles.DB}
-                        导出/备份会写入同目录（带时间戳文件名）
-                        """.trimIndent(),
-                    )
+                    Column {
+                        Text("${s.storageDir}: ${repo.documentsPath()}")
+                        Text("${s.storageDb}: ${StoreFiles.DB}")
+                        Text(s.storageNote)
+                    }
                 }
             },
-            confirmButton = { TextButton(onClick = { storageDialog = false }) { Text("关闭") } },
+            confirmButton = {
+                TextButton(onClick = { storageDialog = false }) { Text(s.close) }
+            },
         )
     }
 
     if (aboutDialog) {
         AlertDialog(
             onDismissRequest = { aboutDialog = false },
-            title = { Text("PwdStore") },
+            title = { Text(s.appName) },
             text = {
-                Text("版本 1.0\n本地存储 · 高强度加密 · 主密码保护")
+                Column {
+                    Text(s.appVersion)
+                    Text(s.aboutBody, style = MaterialTheme.typography.bodyMedium)
+                }
             },
-            confirmButton = { TextButton(onClick = { aboutDialog = false }) { Text("关闭") } },
+            confirmButton = {
+                TextButton(onClick = { aboutDialog = false }) { Text(s.close) }
+            },
         )
     }
 }
 
 @Composable
-private fun SectionTitle(text: String) {
-    Text(text, Modifier.padding(16.dp, 12.dp, 16.dp, 4.dp))
+private fun ValueText(text: String) {
+    Text(
+        text,
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+}
+
+@Composable
+private fun <T> ChoiceDialog(
+    title: String,
+    options: List<T>,
+    selected: T,
+    labelOf: (T) -> String,
+    onSelect: (T) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = {
+            Column {
+                options.forEach { option ->
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .clickable { onSelect(option) }
+                            .padding(vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        RadioButton(selected = option == selected, onClick = { onSelect(option) })
+                        Text(labelOf(option))
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = { TextButton(onClick = onDismiss) { Text(I18n.strings.cancel) } },
+    )
 }
 
 @Composable
@@ -447,6 +529,7 @@ private fun ChangeMasterPasswordDialog(
     snack: SnackbarHostState,
     onDismiss: () -> Unit,
 ) {
+    val s = I18n.strings
     var cur by remember { mutableStateOf("") }
     var neu by remember { mutableStateOf("") }
     var confirm by remember { mutableStateOf("") }
@@ -455,31 +538,34 @@ private fun ChangeMasterPasswordDialog(
     val scope = rememberCoroutineScope()
     AlertDialog(
         onDismissRequest = { if (!loading) onDismiss() },
-        title = { Text("修改主密码") },
+        title = { Text(s.changeMasterPassword) },
         text = {
             Column {
                 OutlinedTextField(
                     value = cur,
                     onValueChange = { cur = it },
-                    label = { Text("当前密码") },
+                    label = { Text(s.masterPassword) },
+                    singleLine = true,
                     visualTransformation = if (show) VisualTransformation.None else PasswordVisualTransformation(),
                     trailingIcon = { PasswordVisibilityToggle(show) { show = !show } },
                 )
                 OutlinedTextField(
                     value = neu,
                     onValueChange = { neu = it },
-                    label = { Text("新密码") },
+                    label = { Text(s.password) },
+                    singleLine = true,
                     visualTransformation = if (show) VisualTransformation.None else PasswordVisualTransformation(),
                 )
                 OutlinedTextField(
                     value = confirm,
                     onValueChange = { confirm = it },
-                    label = { Text("确认新密码") },
+                    label = { Text(s.confirmPassword) },
+                    singleLine = true,
                     visualTransformation = if (show) VisualTransformation.None else PasswordVisualTransformation(),
                 )
                 if (loading) {
                     Spacer(Modifier.height(8.dp))
-                    Text("处理中…")
+                    Text(s.processing)
                 }
             }
         },
@@ -488,8 +574,8 @@ private fun ChangeMasterPasswordDialog(
                 enabled = !loading,
                 onClick = {
                     when {
-                        neu.length < 4 -> scope.launch { snack.showSnackbar("新密码至少 4 位") }
-                        neu != confirm -> scope.launch { snack.showSnackbar("两次新密码不一致") }
+                        neu.length < 4 -> scope.launch { snack.showSnackbar(s.errPasswordShort) }
+                        neu != confirm -> scope.launch { snack.showSnackbar(s.errPasswordMismatch) }
                         else -> {
                             loading = true
                             scope.launch {
@@ -500,15 +586,20 @@ private fun ChangeMasterPasswordDialog(
                                 loading = false
                                 if (err != null) snack.showSnackbar(err)
                                 else {
-                                    snack.showSnackbar("主密码已修改")
+                                    snack.showSnackbar(s.masterChanged)
                                     onDismiss()
                                 }
                             }
                         }
                     }
                 },
-            ) { Text("确定") }
+            ) { Text(s.ok) }
         },
-        dismissButton = { TextButton(enabled = !loading, onClick = onDismiss) { Text("取消") } },
+        dismissButton = { TextButton(enabled = !loading, onClick = onDismiss) { Text(s.cancel) } },
     )
+}
+
+private fun daysText(durationHours: Double): String {
+    val days = durationHours / 24
+    return if (days == days.toLong().toDouble()) days.toLong().toString() else days.toString()
 }

@@ -15,6 +15,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
@@ -24,6 +25,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -42,6 +44,7 @@ import zhiqiu.app.data.PasswordEntry
 import zhiqiu.app.data.PasswordGenerator
 import zhiqiu.app.data.PasswordRepository
 import zhiqiu.app.data.PlatformTime
+import zhiqiu.app.i18n.I18n
 import zhiqiu.app.ui.components.AppIcon
 import zhiqiu.app.ui.components.AppIcons
 import zhiqiu.app.ui.components.IconGlyph
@@ -55,6 +58,7 @@ fun EditPasswordScreen(
     onBack: () -> Unit,
     onSaved: () -> Unit,
 ) {
+    val s = I18n.strings
     val existing = remember(editId) { editId?.let { repo.getById(it) } }
     var title by remember { mutableStateOf(existing?.title.orEmpty()) }
     var username by remember { mutableStateOf(existing?.username.orEmpty()) }
@@ -74,8 +78,11 @@ fun EditPasswordScreen(
         snackbarHost = { SnackbarHost(snack) },
         topBar = {
             TopAppBar(
-                title = { Text(if (editId == null) "添加密码" else "编辑密码") },
-                navigationIcon = { IconButton(onClick = onBack) { AppIcon(AppIcons.Back, "返回") } },
+                title = { Text(if (editId == null) s.addEntry else s.editEntry) },
+                navigationIcon = { IconButton(onClick = onBack) { AppIcon(AppIcons.Back, s.cdBack) } },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background,
+                ),
             )
         },
     ) { padding ->
@@ -89,19 +96,20 @@ fun EditPasswordScreen(
             OutlinedTextField(
                 value = title,
                 onValueChange = { title = it },
-                label = { Text("名称") },
+                label = { Text(s.name) },
+                singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
                 leadingIcon = { IconGlyph(iconKey, Modifier.size(24.dp)) },
                 trailingIcon = {
                     IconButton(onClick = { iconMenu = true }) {
-                        AppIcon(AppIcons.Apps, "更改图标")
+                        AppIcon(AppIcons.Apps, s.cdChangeIcon)
                     }
                 },
             )
             if (iconMenu) {
                 AlertDialog(
                     onDismissRequest = { iconMenu = false },
-                    title = { Text("选择图标") },
+                    title = { Text(s.selectIcon) },
                     text = {
                         Column(
                             Modifier
@@ -118,8 +126,10 @@ fun EditPasswordScreen(
                                         TextButton(
                                             onClick = {
                                                 iconKey = opt.key
-                                                if (title.isBlank() || IconCatalog.all.any { it.label == title }) {
-                                                    title = opt.label
+                                                if (title.isBlank() ||
+                                                    IconCatalog.all.any { s.iconLabel(it.key) == title }
+                                                ) {
+                                                    title = s.iconLabel(opt.key)
                                                 }
                                                 iconMenu = false
                                             },
@@ -128,7 +138,7 @@ fun EditPasswordScreen(
                                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                                 IconGlyph(opt.key, Modifier.size(28.dp))
                                                 Spacer(Modifier.height(4.dp))
-                                                Text(opt.label)
+                                                Text(s.iconLabel(opt.key))
                                             }
                                         }
                                     }
@@ -140,21 +150,23 @@ fun EditPasswordScreen(
                         }
                     },
                     confirmButton = {},
-                    dismissButton = { TextButton(onClick = { iconMenu = false }) { Text("关闭") } },
+                    dismissButton = { TextButton(onClick = { iconMenu = false }) { Text(s.close) } },
                 )
             }
             Spacer(Modifier.height(8.dp))
             OutlinedTextField(
                 value = username,
                 onValueChange = { username = it },
-                label = { Text("用户名/邮箱") },
+                label = { Text(s.usernameOrEmail) },
+                singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
             Spacer(Modifier.height(8.dp))
             OutlinedTextField(
                 value = password,
                 onValueChange = { password = it },
-                label = { Text("密码") },
+                label = { Text(s.password) },
+                singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
                 visualTransformation = if (showPwd) VisualTransformation.None else PasswordVisualTransformation(),
                 trailingIcon = {
@@ -166,46 +178,46 @@ fun EditPasswordScreen(
             )
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                 IconButton(onClick = { password = PasswordGenerator.generate(prefs) }) {
-                    AppIcon(AppIcons.Refresh, "重新生成")
+                    AppIcon(AppIcons.Refresh, s.cdRegenerate)
                 }
                 IconButton(onClick = { genDialog = true }) {
-                    AppIcon(AppIcons.Settings, "生成设置")
+                    AppIcon(AppIcons.Settings, s.generatorSettings)
                 }
             }
             Spacer(Modifier.height(8.dp))
             OutlinedTextField(
-                value = category.label,
+                value = s.categoryLabel(category),
                 onValueChange = {},
                 readOnly = true,
-                label = { Text("分类") },
+                label = { Text(s.category) },
                 modifier = Modifier.fillMaxWidth(),
                 trailingIcon = {
-                    TextButton(onClick = { catExpanded = true }) { Text("选择") }
+                    TextButton(onClick = { catExpanded = true }) { Text(s.select) }
                 },
             )
             if (catExpanded) {
                 AlertDialog(
                     onDismissRequest = { catExpanded = false },
-                    title = { Text("选择分类") },
+                    title = { Text(s.selectCategory) },
                     text = {
                         Column {
                             PasswordCategory.entries.forEach { c ->
                                 TextButton(onClick = {
                                     category = c
                                     catExpanded = false
-                                }) { Text(c.label) }
+                                }) { Text(s.categoryLabel(c)) }
                             }
                         }
                     },
                     confirmButton = {},
-                    dismissButton = { TextButton(onClick = { catExpanded = false }) { Text("关闭") } },
+                    dismissButton = { TextButton(onClick = { catExpanded = false }) { Text(s.close) } },
                 )
             }
             Spacer(Modifier.height(8.dp))
             OutlinedTextField(
                 value = notes,
                 onValueChange = { notes = it },
-                label = { Text("备注") },
+                label = { Text(s.notes) },
                 modifier = Modifier.fillMaxWidth().height(120.dp),
                 maxLines = 5,
             )
@@ -214,7 +226,8 @@ fun EditPasswordScreen(
                 onClick = {
                     when {
                         title.isBlank() || username.isBlank() || password.isBlank() ->
-                            scope.launch { snack.showSnackbar("请填写必填项") }
+                            scope.launch { snack.showSnackbar(s.errRequiredFields) }
+
                         else -> {
                             if (editId == null) {
                                 repo.add(
@@ -248,7 +261,7 @@ fun EditPasswordScreen(
                     }
                 },
                 modifier = Modifier.fillMaxWidth(),
-            ) { Text("保存") }
+            ) { Text(s.save) }
         }
     }
 
@@ -256,30 +269,30 @@ fun EditPasswordScreen(
         var local = prefs
         AlertDialog(
             onDismissRequest = { genDialog = false },
-            title = { Text("生成设置") },
+            title = { Text(s.generatorSettings) },
             text = {
                 Column {
-                    PrefSwitch("大写", local.uppercase) {
+                    PrefSwitch(s.genUppercase, local.uppercase) {
                         local = local.copy(uppercase = it)
                         prefs = local
                         repo.writeGeneratorPrefs(local)
                     }
-                    PrefSwitch("小写", local.lowercase) {
+                    PrefSwitch(s.genLowercase, local.lowercase) {
                         local = local.copy(lowercase = it)
                         prefs = local
                         repo.writeGeneratorPrefs(local)
                     }
-                    PrefSwitch("数字", local.digits) {
+                    PrefSwitch(s.genDigits, local.digits) {
                         local = local.copy(digits = it)
                         prefs = local
                         repo.writeGeneratorPrefs(local)
                     }
-                    PrefSwitch("特殊字符", local.symbols) {
+                    PrefSwitch(s.genSymbols, local.symbols) {
                         local = local.copy(symbols = it)
                         prefs = local
                         repo.writeGeneratorPrefs(local)
                     }
-                    Text("当前长度: ${local.length} 位")
+                    Text(s.passwordLength(local.length))
                     Slider(
                         value = local.length.toFloat(),
                         onValueChange = {
@@ -296,20 +309,21 @@ fun EditPasswordScreen(
                 TextButton(onClick = {
                     password = PasswordGenerator.generate(prefs)
                     genDialog = false
-                }) { Text("生成") }
+                }) { Text(s.generate) }
             },
-            dismissButton = { TextButton(onClick = { genDialog = false }) { Text("取消") } },
+            dismissButton = { TextButton(onClick = { genDialog = false }) { Text(s.cancel) } },
         )
     }
 }
 
 @Composable
 private fun PrefSwitch(label: String, checked: Boolean, onChange: (Boolean) -> Unit) {
-    androidx.compose.foundation.layout.Row(
+    Row(
         Modifier.fillMaxWidth(),
-        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween,
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(label)
+        Text(label, style = MaterialTheme.typography.bodyMedium)
         Switch(checked = checked, onCheckedChange = onChange)
     }
 }

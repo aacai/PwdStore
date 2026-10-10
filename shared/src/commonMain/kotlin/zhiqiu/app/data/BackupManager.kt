@@ -1,33 +1,35 @@
 package zhiqiu.app.data
 
 import kotlinx.serialization.Serializable
+import zhiqiu.app.i18n.I18n
 
 object BackupManager {
     fun exportTxt(entries: List<PasswordEntry>): String {
+        val s = I18n.strings
         val sb = StringBuilder()
-        sb.appendLine("密码导出")
-        sb.appendLine("导出时间: ${formatDateTime(PlatformTime.nowMillis())}")
-        sb.appendLine("条目数: ${entries.size}")
+        sb.appendLine(s.exportTitle)
+        sb.appendLine("${s.exportTime}: ${formatDateTime(PlatformTime.nowMillis())}")
+        sb.appendLine("${s.entryCount}: ${entries.size}")
         sb.appendLine()
         entries.forEach { e ->
-            sb.appendLine("名称: ${e.title}")
-            sb.appendLine("账号: ${e.username}")
-            sb.appendLine("密码: ********")
-            sb.appendLine("分类: ${e.categoryEnum().label}")
-            sb.appendLine("创建时间: ${formatDateTime(e.createdAt)}")
+            sb.appendLine("${s.name}: ${e.title}")
+            sb.appendLine("${s.exportAccount}: ${e.username}")
+            sb.appendLine("${s.password}: ${s.maskedExport}")
+            sb.appendLine("${s.category}: ${s.categoryLabel(e.categoryEnum())}")
+            sb.appendLine("${s.created}: ${formatDateTime(e.createdAt)}")
             sb.appendLine("---")
         }
         return sb.toString()
     }
 
     fun exportTxtFileName(now: Long = PlatformTime.nowMillis()): String =
-        "密码数据_$now.txt"
+        "pwdstore_export_$now.txt"
 
     fun backupFileName(now: Long = PlatformTime.nowMillis()): String =
-        "pwdbackup_$now.json"
+        "pwdstore_backup_$now.json"
 
     fun createEncryptedBackup(entries: List<PasswordEntry>, masterPassword: String): ByteArray {
-        require(masterPassword.isNotEmpty()) { "请先设置主密码" }
+        require(masterPassword.isNotEmpty()) { I18n.strings.setMasterFirst }
         val payload = BackupPayload(
             timestamp = PlatformTime.nowMillis(),
             entryCount = entries.size,
@@ -52,31 +54,32 @@ object BackupManager {
     }
 
     fun parseBackup(bytes: ByteArray, password: String): BackupPayload {
-        require(password.isNotEmpty()) { "请输入备份密码" }
+        val s = I18n.strings
+        require(password.isNotEmpty()) { s.errBackupPasswordEmpty }
         val pkg = try {
             JsonX.json.decodeFromString(BackupPackage.serializer(), bytes.decodeToString())
         } catch (_: Exception) {
-            error("解析失败：不是有效的备份文件")
+            error(s.errNotBackup)
         }
         val encBytes = pkg.encryptedData.encodeToByteArray()
         if (Crypto.md5Hex(encBytes) != pkg.metadata.checksum) {
-            error("解析失败：文件已损坏")
+            error(s.errBackupCorrupt)
         }
         val salt = try {
             Crypto.decodeBase64(pkg.salt)
         } catch (_: Exception) {
-            error("解析失败：文件已损坏")
+            error(s.errBackupCorrupt)
         }
         val key = Crypto.deriveKey(password, salt)
         val plain = try {
             Crypto.decrypt(pkg.encryptedData, key)
         } catch (_: Exception) {
-            error("解析失败：密码错误或文件损坏")
+            error(s.errBackupPassword)
         }
         return try {
             JsonX.json.decodeFromString(BackupPayload.serializer(), plain)
         } catch (_: Exception) {
-            error("解析失败：文件已损坏")
+            error(s.errBackupCorrupt)
         }
     }
 

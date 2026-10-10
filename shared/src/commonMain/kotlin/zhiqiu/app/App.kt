@@ -7,6 +7,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import zhiqiu.app.data.PasswordRepository
 import zhiqiu.app.data.ThemeMode
+import zhiqiu.app.i18n.AppLanguage
+import zhiqiu.app.i18n.I18n
 import zhiqiu.app.ui.AppBackground
 import zhiqiu.app.ui.PwdTheme
 import zhiqiu.app.ui.Route
@@ -21,10 +23,14 @@ import zhiqiu.app.ui.screens.UnlockScreen
 fun App() {
     val repo = remember { PasswordRepository() }
     var themeMode by remember { mutableStateOf(repo.readTheme()) }
+    var language by remember {
+        mutableStateOf(repo.readLanguage().also { I18n.language = it })
+    }
     var route by remember {
         mutableStateOf<Route>(
             when {
                 !repo.hasMasterPassword() -> Route.Setup
+                repo.biometricEnabled() -> Route.Unlock
                 repo.tryPasswordFreeUnlock() -> Route.Home
                 else -> Route.Unlock
             },
@@ -64,9 +70,15 @@ fun App() {
                 Route.Settings -> SettingsScreen(
                     repo = repo,
                     themeMode = themeMode,
+                    language = language,
                     onThemeChanged = {
                         themeMode = it
                         repo.writeTheme(it)
+                    },
+                    onLanguageChanged = {
+                        language = it
+                        I18n.language = it
+                        repo.writeLanguage(it)
                     },
                     onBack = { route = Route.Home },
                     onLocked = { route = Route.Unlock },

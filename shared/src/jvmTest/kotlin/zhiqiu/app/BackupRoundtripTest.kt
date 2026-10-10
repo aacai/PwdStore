@@ -8,6 +8,8 @@ import zhiqiu.app.data.BackupManager
 import zhiqiu.app.data.PasswordCategory
 import zhiqiu.app.data.PasswordEntry
 import zhiqiu.app.data.PasswordHistoryItem
+import zhiqiu.app.i18n.AppLanguage
+import zhiqiu.app.i18n.I18n
 
 class BackupRoundtripTest {
 
@@ -54,7 +56,29 @@ class BackupRoundtripTest {
         val err = assertFailsWith<IllegalStateException> {
             BackupManager.parseBackup(bytes, "wrong")
         }
-        assertTrue(err.message!!.contains("密码错误") || err.message!!.contains("损坏"))
+        assertTrue(err.message!!.isNotBlank())
+    }
+
+    @Test
+    fun messagesFollowSelectedLanguage() {
+        val entries = listOf(
+            PasswordEntry(id = "m1", title = "M", username = "u", password = "p", createdAt = 1L),
+        )
+        val bytes = BackupManager.createEncryptedBackup(entries, "right")
+        try {
+            I18n.language = AppLanguage.EN
+            val en = assertFailsWith<IllegalStateException> {
+                BackupManager.parseBackup(bytes, "wrong")
+            }.message!!
+            I18n.language = AppLanguage.ZH
+            val zh = assertFailsWith<IllegalStateException> {
+                BackupManager.parseBackup(bytes, "wrong")
+            }.message!!
+            assertTrue(en.contains("Parse failed"), en)
+            assertTrue(zh.contains("解析失败"), zh)
+        } finally {
+            I18n.language = AppLanguage.SYSTEM
+        }
     }
 
     @Test

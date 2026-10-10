@@ -1,15 +1,20 @@
 package zhiqiu.app.data
 
+import zhiqiu.app.i18n.I18n
+
 actual object BiometricAuth {
+    actual fun hardwareSupported(): Boolean = false
+
     actual fun isAvailable(): Boolean = false
 
     actual fun authenticate(
         title: String,
         subtitle: String,
+        negativeButton: String,
         onSuccess: () -> Unit,
         onError: (String) -> Unit,
         onCancel: () -> Unit,
     ) {
-        onError("当前平台不支持生物识别")
+        onError(I18n.strings.biometricPlatformUnsupported)
     }
 }

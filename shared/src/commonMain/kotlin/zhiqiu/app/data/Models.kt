@@ -2,10 +2,10 @@ package zhiqiu.app.data
 
 import kotlinx.serialization.Serializable
 
-enum class PasswordCategory(val label: String) {
-    WORK("工作"),
-    SOCIAL("社交"),
-    OTHER("其他");
+enum class PasswordCategory {
+    WORK,
+    SOCIAL,
+    OTHER;
 
     companion object {
         fun fromName(name: String): PasswordCategory =
@@ -15,13 +15,13 @@ enum class PasswordCategory(val label: String) {
     }
 }
 
-enum class ThemeMode(val label: String) {
-    SYSTEM("跟随系统"),
-    LIGHT("浅色"),
-    DARK("深色");
+enum class ThemeMode {
+    SYSTEM,
+    LIGHT,
+    DARK,
 }
 
-data class IconOption(val key: String, val label: String)
+data class IconOption(val key: String, val name: String)
 
 object IconCatalog {
     val all = listOf(
@@ -37,11 +37,10 @@ object IconCatalog {
         IconOption("linkedin", "LinkedIn"),
         IconOption("apple", "Apple"),
         IconOption("microsoft", "Microsoft"),
-        IconOption("other", "其他"),
+        IconOption("other", "other"),
     )
 
-    fun labelOf(key: String): String =
-        all.find { it.key == key }?.label ?: "其他"
+    fun nameOf(key: String): String = all.find { it.key == key }?.name ?: key
 }
 
 @Serializable

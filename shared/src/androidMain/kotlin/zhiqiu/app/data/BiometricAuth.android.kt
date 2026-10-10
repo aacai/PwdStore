@@ -4,67 +4,71 @@ import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
+import zhiqiu.app.i18n.I18n
 
 actual object BiometricAuth {
-    actual fun isAvailable(): Boolean {
-        val ctx = AndroidBridge.appContext
-        val mgr = BiometricManager.from(ctx)
-        val can = mgr.canAuthenticate(
-            BiometricManager.Authenticators.BIOMETRIC_STRONG or
-                BiometricManager.Authenticators.BIOMETRIC_WEAK,
-        )
-        return can == BiometricManager.BIOMETRIC_SUCCESS
+    private const val AUTHENTICATORS = BiometricManager.Authenticators.BIOMETRIC_STRONG or
+        BiometricManager.Authenticators.BIOMETRIC_WEAK
+
+    private fun context(): android.content.Context? = runCatching { AndroidBridge.appContext }.getOrNull()
+
+    private fun canAuthenticate(): Int {
+        val ctx = context() ?: return BiometricManager.BIOMETRIC_ERROR_NO_HARDWARE
+        return BiometricManager.from(ctx).canAuthenticate(AUTHENTICATORS)
     }
+
+    actual fun hardwareSupported(): Boolean {
+        val result = canAuthenticate()
+        return result != BiometricManager.BIOMETRIC_ERROR_NO_HARDWARE &&
+            result != BiometricManager.BIOMETRIC_ERROR_HW_UNAVAILABLE
+    }
+
+    actual fun isAvailable(): Boolean = canAuthenticate() == BiometricManager.BIOMETRIC_SUCCESS
 
     actual fun authenticate(
         title: String,
         subtitle: String,
+        negativeButton: String,
         onSuccess: () -> Unit,
         onError: (String) -> Unit,
         onCancel: () -> Unit,
     ) {
         val activity = AndroidBridge.activity as? FragmentActivity
-        if (activity == null) {
-            onError("无法启动生物识别")
+        if (activity == null || activity.isFinishing || activity.isDestroyed) {
+            onError(I18n.strings.biometricNotStarted)
             return
         }
         if (!isAvailable()) {
-            onError("设备未录入指纹/面容或不支持")
+            onError(I18n.strings.biometricUnavailable)
             return
         }
-        val executor = ContextCompat.getMainExecutor(activity)
         val prompt = BiometricPrompt(
             activity,
-            executor,
+            ContextCompat.getMainExecutor(activity),
             object : BiometricPrompt.AuthenticationCallback() {
                 override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
                     onSuccess()
                 }
 
                 override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
-                    if (errorCode == BiometricPrompt.ERROR_USER_CANCELED ||
+                    val cancelled = errorCode == BiometricPrompt.ERROR_USER_CANCELED ||
                         errorCode == BiometricPrompt.ERROR_NEGATIVE_BUTTON ||
                         errorCode == BiometricPrompt.ERROR_CANCELED
-                    ) {
-                        onCancel()
-                    } else {
-                        onError(errString.toString())
+                    when {
+                        cancelled -> onCancel()
+                        else -> onError(errString.toString())
                     }
                 }
 
-                override fun onAuthenticationFailed() {
-                    // keep prompting; no-op
-                }
+                override fun onAuthenticationFailed() = Unit
             },
         )
         val info = BiometricPrompt.PromptInfo.Builder()
             .setTitle(title)
             .setSubtitle(subtitle)
-            .setNegativeButtonText("使用密码")
-            .setAllowedAuthenticators(
-                BiometricManager.Authenticators.BIOMETRIC_STRONG or
-                    BiometricManager.Authenticators.BIOMETRIC_WEAK,
-            )
+            .setNegativeButtonText(negativeButton)
+            .setConfirmationRequired(false)
+            .setAllowedAuthenticators(AUTHENTICATORS)
             .build()
         prompt.authenticate(info)
     }
