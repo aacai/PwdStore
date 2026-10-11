@@ -25,6 +25,13 @@ actual object BiometricAuth {
             ctx.biometryType in setOf(LABiometryTypeTouchID, LABiometryTypeFaceID)
     }
 
+    actual fun sensorKind(): BiometryKind = when (LAContext().biometryType) {
+        LABiometryTypeTouchID -> BiometryKind.FINGERPRINT
+        LABiometryTypeFaceID -> BiometryKind.FACE
+        LABiometryTypeNone -> BiometryKind.NONE
+        else -> BiometryKind.OTHER
+    }
+
     actual fun authenticate(
         title: String,
         subtitle: String,

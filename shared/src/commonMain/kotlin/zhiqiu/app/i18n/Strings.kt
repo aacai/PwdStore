@@ -4,6 +4,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.intl.Locale
+import zhiqiu.app.data.BiometryKind
 import zhiqiu.app.data.IconCatalog
 import zhiqiu.app.data.PasswordCategory
 import zhiqiu.app.data.ThemeMode
@@ -38,7 +39,6 @@ class Strings(private val zh: Boolean) {
     val unlock = if (zh) "解锁" else "Unlock"
     val welcomeBack = if (zh) "欢迎回来" else "Welcome back"
     val unlockHint = if (zh) "输入主密码继续" else "Enter your master password to continue"
-    val biometricUnlock = if (zh) "指纹 / 面容解锁" else "Unlock with fingerprint or face"
     val forgotPassword = if (zh) "忘记密码？" else "Forgot password?"
     val resetTitle = if (zh) "重置主密码？" else "Reset master password?"
     val resetText = if (zh) "重置会删除所有密码数据，不可恢复。若只想改主密码，请登录后到设置页修改。" else "Resetting permanently deletes every stored password. To only change it, use Settings after unlocking."
@@ -95,6 +95,8 @@ class Strings(private val zh: Boolean) {
     val biometricEnrollHint = if (zh) "请先在系统设置中录入指纹或面容" else "Enroll a fingerprint or face in system settings first"
     val biometricSetupTitle = if (zh) "确认开启生物识别" else "Confirm biometrics"
     val biometricSetupSubtitle = if (zh) "验证后即可用指纹/面容解锁" else "Verify once to enable biometric unlock"
+    val enable = if (zh) "启用" else "Enable"
+    val biometricEnableNeedsPassword = if (zh) "请先在上方输入主密码" else "Enter your master password above first"
     val lockNow = if (zh) "立即锁定" else "Lock now"
     val theme = if (zh) "主题" else "Theme"
     val language = if (zh) "语言" else "Language"
@@ -169,6 +171,22 @@ class Strings(private val zh: Boolean) {
     fun exportedTo(fileName: String): String = if (zh) "已导出: $fileName" else "Exported: $fileName"
     fun backupSavedTo(fileName: String): String = if (zh) "备份已保存: $fileName" else "Backup saved: $fileName"
     fun setupFailedWith(reason: String): String = if (zh) "设置失败: $reason" else "Setup failed: $reason"
+
+    fun sensorName(kind: BiometryKind): String = when (kind) {
+        BiometryKind.FINGERPRINT -> if (zh) "指纹" else "Fingerprint"
+        BiometryKind.FACE -> if (zh) "面容" else "Face ID"
+        BiometryKind.OTHER, BiometryKind.NONE -> if (zh) "生物识别" else "Biometrics"
+    }
+
+    fun biometricUnlockFor(kind: BiometryKind): String =
+        if (zh) "使用${sensorName(kind)}解锁" else "Unlock with ${sensorName(kind)}"
+
+    fun biometricInviteTitle(kind: BiometryKind): String =
+        if (zh) "用${sensorName(kind)}更快解锁" else "Unlock faster with ${sensorName(kind)}"
+
+    fun biometricInviteHint(kind: BiometryKind): String =
+        if (zh) "验证${sensorName(kind)}即可进入，无需每次输入主密码"
+        else "Verify with ${sensorName(kind)} instead of typing your master password"
 
     fun categoryLabel(category: PasswordCategory): String = when (category) {
         PasswordCategory.WORK -> if (zh) "工作" else "Work"

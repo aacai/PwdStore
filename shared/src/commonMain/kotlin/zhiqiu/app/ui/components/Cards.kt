@@ -101,17 +101,23 @@ fun SectionLabel(text: String) {
 }
 
 @Composable
-fun HeroLockBadge() {
+fun HeroLockBadge(
+    icon: ImageVector = AppIcons.Lock,
+    contentDescription: String? = null,
+    onClick: (() -> Unit)? = null,
+) {
+    val modifier = Modifier
+        .size(88.dp)
+        .clip(CircleShape)
+        .background(MaterialTheme.colorScheme.primaryContainer)
+        .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
     Box(
-        Modifier
-            .size(88.dp)
-            .clip(CircleShape)
-            .background(MaterialTheme.colorScheme.primaryContainer),
+        modifier,
         contentAlignment = Alignment.Center,
     ) {
         AppIcon(
-            AppIcons.Lock,
-            contentDescription = null,
+            icon,
+            contentDescription = contentDescription,
             modifier = Modifier.size(40.dp),
             tint = MaterialTheme.colorScheme.primary,
         )

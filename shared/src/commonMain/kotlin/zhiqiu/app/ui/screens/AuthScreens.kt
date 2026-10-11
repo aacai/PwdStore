@@ -2,12 +2,15 @@ package zhiqiu.app.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
@@ -20,6 +23,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -41,6 +45,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import zhiqiu.app.data.BiometricAuth
+import zhiqiu.app.data.BiometryKind
 import zhiqiu.app.data.PasswordRepository
 import zhiqiu.app.i18n.I18n
 import zhiqiu.app.ui.components.AppIcon
@@ -156,9 +161,11 @@ fun UnlockScreen(
     var confirmReset by remember { mutableStateOf(0) }
     val snack = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
-    val bioEnabled = remember { repo.readAuthConfig().biometricEnabled }
-    val bioAvailable = remember { BiometricAuth.isAvailable() }
-    val canBio = bioEnabled && bioAvailable
+    var auth by remember { mutableStateOf(repo.readAuthConfig()) }
+    val available = remember { BiometricAuth.isAvailable() }
+    val kind = remember { BiometricAuth.sensorKind() }
+    val canBio = auth.biometricEnabled && available
+    val inviteBio = available && !auth.biometricEnabled
     var prompted by remember { mutableStateOf(false) }
 
     fun unlockOk() {
@@ -182,7 +189,7 @@ fun UnlockScreen(
     fun runBiometric() {
         BiometricAuth.authenticate(
             title = s.unlock,
-            subtitle = s.biometricUnlock,
+            subtitle = s.biometricUnlockFor(kind),
             negativeButton = s.biometricUsePassword,
             onSuccess = {
                 scope.launch {
@@ -192,6 +199,31 @@ fun UnlockScreen(
                     } else {
                         snack.showSnackbar(s.biometricNoCredential)
                     }
+                }
+            },
+            onError = { msg -> scope.launch { snack.showSnackbar(msg) } },
+        )
+    }
+
+    fun enableBiometric() {
+        if (password.isBlank()) {
+            scope.launch { snack.showSnackbar(s.biometricEnableNeedsPassword) }
+            return
+        }
+        BiometricAuth.authenticate(
+            title = s.biometricSetupTitle,
+            subtitle = s.biometricSetupSubtitle,
+            negativeButton = s.cancel,
+            onSuccess = {
+                scope.launch {
+                    val typed = withContext(Dispatchers.Default) { repo.verifyMasterPassword(password) }
+                    if (!typed) {
+                        snack.showSnackbar(s.errWrongPassword)
+                        return@launch
+                    }
+                    auth = auth.copy(biometricEnabled = true)
+                    repo.writeAuthConfig(auth)
+                    unlockOk()
                 }
             },
             onError = { msg -> scope.launch { snack.showSnackbar(msg) } },
@@ -222,11 +254,15 @@ fun UnlockScreen(
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            HeroLockBadge()
+            if (canBio) {
+                HeroLockBadge(AppIcons.Fingerprint, s.biometricUnlockFor(kind)) { runBiometric() }
+            } else {
+                HeroLockBadge()
+            }
             Spacer(Modifier.height(16.dp))
             Text(s.welcomeBack, style = MaterialTheme.typography.headlineSmall)
             Text(
-                s.unlockHint,
+                if (canBio) s.biometricUnlockFor(kind) else s.unlockHint,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -261,8 +297,20 @@ fun UnlockScreen(
                     ) {
                         AppIcon(AppIcons.Fingerprint, null, Modifier.size(20.dp))
                         Spacer(Modifier.size(8.dp))
-                        Text(s.biometricUnlock)
+                        Text(s.biometricUnlockFor(kind))
                     }
+                }
+                if (auth.biometricEnabled && !available) {
+                    Spacer(Modifier.height(10.dp))
+                    Text(
+                        s.biometricUnavailable,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                if (inviteBio) {
+                    Spacer(Modifier.height(16.dp))
+                    BiometricInvite(kind) { enableBiometric() }
                 }
             }
             Spacer(Modifier.height(8.dp))
@@ -289,6 +337,45 @@ fun UnlockScreen(
                 onReset()
             },
         )
+    }
+}
+
+@Composable
+private fun BiometricInvite(kind: BiometryKind, onEnable: () -> Unit) {
+    val s = I18n.strings
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp),
+        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
+        contentColor = MaterialTheme.colorScheme.onSurface,
+    ) {
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            AppIcon(
+                AppIcons.Fingerprint,
+                contentDescription = null,
+                modifier = Modifier.size(26.dp),
+                tint = MaterialTheme.colorScheme.primary,
+            )
+            Column(Modifier.weight(1f).padding(start = 12.dp, end = 8.dp)) {
+                Text(
+                    s.biometricInviteTitle(kind),
+                    style = MaterialTheme.typography.titleSmall,
+                )
+                Text(
+                    s.biometricInviteHint(kind),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Button(
+                onClick = onEnable,
+                shape = MaterialTheme.shapes.small,
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+            ) { Text(s.enable) }
+        }
     }
 }
 

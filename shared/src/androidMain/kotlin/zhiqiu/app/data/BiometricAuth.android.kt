@@ -25,6 +25,19 @@ actual object BiometricAuth {
 
     actual fun isAvailable(): Boolean = canAuthenticate() == BiometricManager.BIOMETRIC_SUCCESS
 
+    actual fun sensorKind(): BiometryKind {
+        val ctx = context() ?: return BiometryKind.NONE
+        if (!hardwareSupported()) return BiometryKind.NONE
+        val pm = ctx.packageManager
+        val face = pm.hasSystemFeature(android.content.pm.PackageManager.FEATURE_FACE)
+        val finger = pm.hasSystemFeature(android.content.pm.PackageManager.FEATURE_FINGERPRINT)
+        return when {
+            finger -> BiometryKind.FINGERPRINT
+            face -> BiometryKind.FACE
+            else -> BiometryKind.OTHER
+        }
+    }
+
     actual fun authenticate(
         title: String,
         subtitle: String,

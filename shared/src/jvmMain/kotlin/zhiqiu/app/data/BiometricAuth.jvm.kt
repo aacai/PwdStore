@@ -7,6 +7,8 @@ actual object BiometricAuth {
 
     actual fun isAvailable(): Boolean = false
 
+    actual fun sensorKind(): BiometryKind = BiometryKind.NONE
+
     actual fun authenticate(
         title: String,
         subtitle: String,
