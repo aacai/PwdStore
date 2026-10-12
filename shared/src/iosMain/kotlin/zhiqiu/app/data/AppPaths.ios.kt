@@ -8,7 +8,7 @@ import platform.Foundation.NSUserDomainMask
 
 @OptIn(ExperimentalForeignApi::class)
 actual object AppPaths {
-    actual fun documentsDir(): String {
+    actual fun dataDir(): String {
         val paths = NSSearchPathForDirectoriesInDomains(
             NSDocumentDirectory,
             NSUserDomainMask,

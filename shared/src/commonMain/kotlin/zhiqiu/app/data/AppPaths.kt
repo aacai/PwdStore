@@ -1,17 +1,18 @@
 package zhiqiu.app.data
 
 expect object AppPaths {
-    fun documentsDir(): String
+    /** 应用私有数据目录：读写数据库、备份、导出文件都落在这里 */
+    fun dataDir(): String
 }
 
 object AppBootstrap {
-    var documentsDir: String = ""
+    var dataDir: String = ""
         private set
 
-    fun init(documentsDir: String) {
-        this.documentsDir = documentsDir
+    fun init(dataDir: String) {
+        this.dataDir = dataDir
     }
 
     fun resolveDir(): String =
-        documentsDir.ifBlank { AppPaths.documentsDir() }
+        dataDir.ifBlank { AppPaths.dataDir() }
 }

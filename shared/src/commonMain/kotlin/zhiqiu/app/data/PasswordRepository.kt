@@ -296,7 +296,7 @@ class PasswordRepository(
         writeGeneratorPrefs(readGeneratorPrefs().copy(showPassword = show))
     }
 
-    fun documentsPath(): String = dir()
+    fun dataPath(): String = dir()
 
     private fun encryptMasterForDevice(password: String): String =
         Crypto.encrypt(password, SecureDeviceKey.getOrCreate())

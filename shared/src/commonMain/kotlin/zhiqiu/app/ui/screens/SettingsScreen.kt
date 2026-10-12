@@ -234,9 +234,9 @@ fun SettingsScreen(
                                         BackupManager.createEncryptedBackup(repo.getAllDecrypted(), pwd)
                                     }
                                     val name = BackupManager.backupFileName()
-                                    FileIo.writeBytes(FileIo.join(repo.documentsPath(), name), bytes)
+                                    FileIo.writeBytes(FileIo.join(repo.dataPath(), name), bytes)
                                     PlatformActions.shareOrRevealFile(
-                                        FileIo.join(repo.documentsPath(), name),
+                                        FileIo.join(repo.dataPath(), name),
                                         "application/json",
                                     )
                                     snack.showSnackbar(s.backupSavedTo(name))
@@ -323,7 +323,7 @@ fun SettingsScreen(
             confirmButton = {
                 TextButton(onClick = {
                     val name = BackupManager.exportTxtFileName()
-                    val path = FileIo.join(repo.documentsPath(), name)
+                    val path = FileIo.join(repo.dataPath(), name)
                     FileIo.writeText(path, text)
                     PlatformActions.shareOrRevealFile(path, "text/plain")
                     exportPreview = null
@@ -452,7 +452,7 @@ fun SettingsScreen(
             text = {
                 SelectionContainer {
                     Column {
-                        Text("${s.storageDir}: ${repo.documentsPath()}")
+                        Text("${s.storageDir}: ${repo.dataPath()}")
                         Text("${s.storageDb}: ${StoreFiles.DB}")
                         Text(s.storageNote)
                     }

@@ -44,6 +44,7 @@
 - **导入**：选择备份文件 → 输入备份时的主密码 → 预览 → 合并写入  
   去重规则：标题 + 密码 + 备注 三者全等则跳过；导入后用**当前**主密码重新加密
 - **存储详情**：可查看本机数据目录路径
+  桌面端用应用私有目录：macOS `~/Library/Application Support/PwdStore`、Windows `%APPDATA%\PwdStore`、Linux `~/.local/share/PwdStore`；不再写 `~/Documents`（macOS 下会弹授权框）。首次启动会把旧的 `~/Documents/PwdStore` 整体复制过去，原目录保留作回滚
 
 ### 隐私与加密（默认行为）
 

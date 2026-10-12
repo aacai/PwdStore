@@ -1,8 +1,8 @@
 package zhiqiu.app.data
 
 actual object AppPaths {
-    actual fun documentsDir(): String {
-        val seeded = AppBootstrap.documentsDir
+    actual fun dataDir(): String {
+        val seeded = AppBootstrap.dataDir
         check(seeded.isNotBlank()) { "AppBootstrap.init 未调用" }
         return seeded
     }

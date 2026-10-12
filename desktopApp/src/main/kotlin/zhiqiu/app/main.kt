@@ -6,7 +6,7 @@ import zhiqiu.app.data.AppBootstrap
 import zhiqiu.app.data.AppPaths
 
 fun main() = application {
-    AppBootstrap.init(AppPaths.documentsDir())
+    AppBootstrap.init(AppPaths.dataDir())
     Window(
         onCloseRequest = ::exitApplication,
         title = "PwdStore",
