@@ -132,7 +132,6 @@ class Strings(private val zh: Boolean) {
     val storageNote = if (zh) "导出/备份会写入同目录（带时间戳文件名）" else "Exports and backups are written here with timestamped file names"
     val aboutApp = if (zh) "关于应用" else "About"
     val aboutBody = if (zh) "本地存储 · 高强度加密 · 主密码保护" else "Local storage · strong encryption · master password protection"
-    val appVersion = if (zh) "版本 1.0" else "Version 1.0"
 
     val errPasswordShort = if (zh) "主密码至少 4 位" else "Master password must be at least 4 characters"
     val errPasswordMismatch = if (zh) "两次输入不一致" else "The two passwords do not match"

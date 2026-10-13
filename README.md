@@ -50,3 +50,12 @@
 - 条目敏感字段入库加密：用户名、密码、备注、历史密码
 - 主密码经 PBKDF2 派生密钥；设备侧另有密钥保护免密/指纹用的主密码密文
 - 全程本地存储，应用不发起网络请求
+
+## 版本与发布
+
+- 版本号只有一个来源：`gradle/libs.versions.toml` 的 `[versions] app`。Android `versionName`、桌面安装包版本、应用内「关于」页（构建期生成的 `AppInfo.VERSION`）全部由它派生，不再有 `-PappVersion` 之类的覆盖入口
+- 版本号首位不能是 0：桌面打包（jpackage）只接受 1~3 段正整数且不允许以 0 开头，`0.1.0` 这类版本会让 dmg/msi/exe 打包直接失败
+- 发布流程：改 toml → 提交 → 打 `vX.Y.Z` 标签并推送。CI 首个 job 会校验标签与 toml 版本一致，不一致直接失败，避免出现「标签一个版本、界面另一个版本」
+- 推送 `vX.Y.Z` 标签即触发打包并创建同名 Release
+- 桌面安装包产品名为 `PwdStore`（macOS 的应用标识 `bundleID` 仍是 `zhiqiu.app`，保住系统已记住的权限与偏好归属）
+- 产物命名：`PwdStore-<版本>-android.apk`、`PwdStore-<版本>-x64.exe` / `.msi`、`PwdStore-<版本>-arm64.dmg`、`pwdstore_<版本>_<amd64|arm64>.deb`（deb 包名按 Debian 规则要求小写）

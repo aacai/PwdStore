@@ -65,6 +65,8 @@ val canSignRelease = !releaseKeystorePath.isNullOrBlank() &&
     !releaseKeyPassword.isNullOrBlank() &&
     file(releaseKeystorePath!!).isFile
 
+val appVersion = libs.versions.app.get()
+
 android {
     namespace = "zhiqiu.app"
     compileSdk = libs.versions.android.compileSdk.get().toInt()
@@ -74,7 +76,7 @@ android {
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
         versionCode = 1
-        versionName = "1.0"
+        versionName = appVersion
         ndk {
             abiFilters += listOf("arm64-v8a")
         }

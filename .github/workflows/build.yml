@@ -32,11 +32,41 @@ defaults:
 
 jobs:
   # ----------------------------------------------------------------
+  # 版本校验：唯一信源是 gradle/libs.versions.toml 的 [versions] app
+  # tag 推送时要求 tag 与该版本一致，产物与安装包不再从外部覆盖版本
+  # ----------------------------------------------------------------
+  version-check:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify app version
+        id: version
+        run: |
+          version=$(awk -F'"' '/^app = / {print $2}' gradle/libs.versions.toml)
+          if [ -z "$version" ]; then
+            echo "::error::gradle/libs.versions.toml 缺少 [versions] app"
+            exit 1
+          fi
+          if [ "$GITHUB_REF_TYPE" = tag ]; then
+            tag="${GITHUB_REF_NAME#v}"
+            if [ "$tag" != "$version" ]; then
+              echo "::error::tag ${GITHUB_REF_NAME}（$tag）与 libs.versions.toml 的 app=$version 不一致，请先改 toml 再打 tag"
+              exit 1
+            fi
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "PwdStore $version" >> "$GITHUB_STEP_SUMMARY"
+
+  # ----------------------------------------------------------------
   # Android：release APK（arm64-v8a），必须用仓库 Secrets 签名
   # Secrets: KEYSTORE_BASE64 / KEYSTORE_PASSWORD / KEY_ALIAS / KEY_PASSWORD
   # ----------------------------------------------------------------
   android:
     if: github.event_name == 'push' || inputs.build_android
+    needs: version-check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -72,6 +102,7 @@ jobs:
 
       - name: Build Android release APK (arm64-v8a)
         env:
+          APP_VERSION: ${{ needs.version-check.outputs.version }}
           KEYSTORE_FILE: ${{ github.workspace }}/key.jks
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
@@ -82,6 +113,15 @@ jobs:
             exit 1
           fi
           ./gradlew :androidApp:assembleRelease --stacktrace
+          echo "APK version: $APP_VERSION"
+
+      - name: Rename APK with product name and version
+        env:
+          APP_VERSION: ${{ needs.version-check.outputs.version }}
+        run: |
+          for apk in androidApp/build/outputs/apk/release/*.apk; do
+            mv "$apk" "$(dirname "$apk")/PwdStore-$APP_VERSION-android.apk"
+          done
 
       - name: Upload Android artifacts
         uses: actions/upload-artifact@v4
@@ -95,6 +135,7 @@ jobs:
   # ----------------------------------------------------------------
   desktop:
     if: github.event_name == 'push' || inputs.build_desktop
+    needs: version-check
     strategy:
       fail-fast: false
       matrix:
@@ -131,13 +172,17 @@ jobs:
       - name: Build desktop package
         run: ./gradlew ${{ matrix.tasks }} --stacktrace
 
-      - name: Add arch suffix to package filenames
-        shell: bash
+      - name: Add arch suffix to packages
         run: |
           cd desktopApp/build/compose/binaries/main
           for ext in deb msi exe dmg; do
             find . -type f -name "*.$ext" | while read -r f; do
-              mv "$f" "${f%.$ext}-${{ matrix.arch }}.$ext"
+              dir=$(dirname "$f")
+              base=$(basename "$f" ".$ext")
+              case "$base" in
+                *-"${{ matrix.arch }}"|*-x64|*-x86_64|*-aarch64|*_amd64|*_arm64) continue ;;
+                *) mv "$f" "$dir/${base}-${{ matrix.arch }}.$ext" ;;
+              esac
             done
           done
 
@@ -154,6 +199,7 @@ jobs:
 
   desktop-arm:
     if: github.event_name == 'push' || inputs.build_desktop
+    needs: version-check
     continue-on-error: true
     strategy:
       fail-fast: false
@@ -185,13 +231,17 @@ jobs:
       - name: Build desktop package
         run: ./gradlew ${{ matrix.tasks }} --stacktrace
 
-      - name: Add arch suffix to package filenames
-        shell: bash
+      - name: Add arch suffix to packages
         run: |
           cd desktopApp/build/compose/binaries/main
           for ext in deb msi exe dmg; do
             find . -type f -name "*.$ext" | while read -r f; do
-              mv "$f" "${f%.$ext}-${{ matrix.arch }}.$ext"
+              dir=$(dirname "$f")
+              base=$(basename "$f" ".$ext")
+              case "$base" in
+                *-"${{ matrix.arch }}"|*-x64|*-x86_64|*-aarch64|*_amd64|*_arm64) continue ;;
+                *) mv "$f" "$dir/${base}-${{ matrix.arch }}.$ext" ;;
+              esac
             done
           done
 
@@ -211,6 +261,7 @@ jobs:
   # ----------------------------------------------------------------
   ios:
     if: github.event_name == 'push' || inputs.build_ios
+    needs: version-check
     runs-on: macos-latest
     continue-on-error: true
     steps:
@@ -312,7 +363,7 @@ jobs:
   # ----------------------------------------------------------------
   release:
     if: startsWith(github.ref, 'refs/tags/')
-    needs: [android, desktop, desktop-arm, ios]
+    needs: [version-check, android, desktop, desktop-arm, ios]
     runs-on: ubuntu-latest
     permissions:
       contents: write

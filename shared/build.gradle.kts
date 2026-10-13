@@ -1,4 +1,5 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.io.File
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
@@ -8,6 +9,27 @@ plugins {
     alias(libs.plugins.kotlinSerialization)
     alias(libs.plugins.ksp)
     alias(libs.plugins.room)
+}
+
+// 版本号的唯一信源是 gradle/libs.versions.toml 的 [versions] app，界面读取生成的 AppInfo
+val generateAppInfo = tasks.register("generateAppInfo") {
+    val version = libs.versions.app.get()
+    val outputDir = layout.buildDirectory.dir("generated/source/appInfo/kotlin").get().asFile
+    inputs.property("appVersion", version)
+    outputs.dir(outputDir)
+    doLast {
+        val dir = File(outputDir, "zhiqiu/app").apply { mkdirs() }
+        dir.resolve("AppInfo.kt").writeText(
+            """
+            package zhiqiu.app
+
+            object AppInfo {
+                const val VERSION: String = "$version"
+            }
+
+            """.trimIndent()
+        )
+    }
 }
 
 kotlin {
@@ -67,6 +89,9 @@ kotlin {
             implementation(libs.androidx.sqlite.bundled)
             implementation(libs.compose.icons.font.awesome)
             implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0")
+        }
+        named("commonMain") {
+            kotlin.srcDir(generateAppInfo)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)

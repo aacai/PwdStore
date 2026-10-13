@@ -43,6 +43,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import zhiqiu.app.data.AppSession
+import zhiqiu.app.AppInfo
 import zhiqiu.app.data.AuthConfig
 import zhiqiu.app.data.BackupManager
 import zhiqiu.app.data.BackupPayload
@@ -271,7 +272,7 @@ fun SettingsScreen(
                     icon = AppIcons.Info,
                     title = s.aboutApp,
                     divider = false,
-                    trailing = { ValueText(s.appVersion) },
+                    trailing = { ValueText("${s.version} ${AppInfo.VERSION}") },
                     onClick = { aboutDialog = true },
                 )
             }
@@ -469,7 +470,7 @@ fun SettingsScreen(
             title = { Text(s.appName) },
             text = {
                 Column {
-                    Text(s.appVersion)
+                    Text("${s.version} ${AppInfo.VERSION}")
                     Text(s.aboutBody, style = MaterialTheme.typography.bodyMedium)
                 }
             },
