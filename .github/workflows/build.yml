@@ -379,6 +379,74 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: gh release delete "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" --yes || true
 
+      # 镜像链路只是兜底：上传失败不阻断 GitHub Release，缺失项在说明里标出来
+      - name: Mirror packages to x0.at (fallback uguu.se)
+        run: |
+          set -uo pipefail
+          mkdir -p mirror
+          : > mirror/index.tsv
+          find artifacts -type f | sort | while read -r f; do
+            name=$(basename "$f")
+            size=$(stat -c %s "$f")
+            sha=$(sha256sum "$f" | cut -d' ' -f1)
+            url=""
+            for attempt in 1 2 3; do
+              out=$(curl -sS --max-time 1800 -F "file=@$f" -F "keep_name=1" https://x0.at/ 2>/dev/null || true)
+              case "$out" in
+                https://x0.at/*) url=$(printf '%s\n' "$out" | head -1); break ;;
+              esac
+              sleep 10
+            done
+            if [ -z "$url" ]; then
+              out=$(curl -sS --max-time 1800 -F "files[]=@$f" https://uguu.se/upload.php 2>/dev/null || true)
+              url=$(printf '%s' "$out" | sed -n 's/.*"url": *"\([^"]*\)".*/\1/p' | head -1 | sed 's#\\/#/#g')
+              case "$url" in
+                https://*) ;;
+                *) url="" ;;
+              esac
+            fi
+            if [ -n "$url" ]; then
+              printf '%s\t%s\t%s\t%s\n' "$name" "$size" "$sha" "$url" >> mirror/index.tsv
+              echo "mirrored: $name -> $url"
+            else
+              echo "::warning::镜像上传失败：$name"
+            fi
+          done
+          cat mirror/index.tsv
+
+      - name: Build update manifest
+        env:
+          APP_VERSION: ${{ needs.version-check.outputs.version }}
+        run: |
+          python3 - <<'PY'
+          import json, os
+          rows = []
+          with open("mirror/index.tsv") as fh:
+              for line in fh:
+                  parts = line.rstrip("\n").split("\t")
+                  if len(parts) != 4:
+                      continue
+                  name, size, sha, url = parts
+                  rows.append({"name": name, "size": int(size), "sha256": sha, "url": url})
+          doc = {"version": os.environ["APP_VERSION"], "assets": rows}
+          with open("mirror/latest.json", "w") as fh:
+              json.dump(doc, fh, ensure_ascii=False, indent=2)
+          PY
+          cat mirror/latest.json
+
+      - name: Upload update manifest
+        run: |
+          url=""
+          for attempt in 1 2 3; do
+            out=$(curl -sS --max-time 120 -F "file=@mirror/latest.json" -F "keep_name=1" https://x0.at/ 2>/dev/null || true)
+            case "$out" in
+              https://x0.at/*) url=$(printf '%s\n' "$out" | head -1); break ;;
+            esac
+            sleep 10
+          done
+          printf '%s' "$url" > mirror/manifest_url.txt
+          echo "manifest: ${url:-<失败>}"
+
       - name: Generate release notes manifest
         run: |
           {
@@ -399,6 +467,20 @@ jobs:
               esac
               printf -- '- `%s` — %s\n' "$f" "$desc"
             done
+            if [ -s mirror/index.tsv ]; then
+              echo
+              echo "## 下载镜像（x0.at）"
+              echo
+              while IFS=$'\t' read -r name size sha url; do
+                printf -- '- [`%s`](%s) — %s bytes, sha256 `%s`\n' "$name" "$url" "$size" "$sha"
+              done < mirror/index.tsv
+              if [ -s mirror/manifest_url.txt ]; then
+                echo
+                printf '版本清单：%s\n' "$(cat mirror/manifest_url.txt)"
+              fi
+              echo
+              echo '> x0.at 链接保留 3~100 天；个别文件回退到 uguu.se 时仅保留 3 小时。'
+            fi
           } > release_notes.md
           cat release_notes.md
 
