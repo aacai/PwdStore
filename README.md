@@ -31,6 +31,12 @@
 
 - 浅色 / 深色 / 跟随系统
 - 解锁页与首页支持快速切换浅↔深
+- 切换主题同步系统栏配色：Android 改状态栏/导航条图标明暗（edge-to-edge 下否则深色界面配深色图标），iOS 改 `overrideUserInterfaceStyle`，桌面端为空实现
+
+### 屏幕适配（edge-to-edge）
+
+- Android 入口 `enableEdgeToEdge()`；targetSdk 37 下窗口不再为键盘缩放，内边距必须自己吃
+- 每个页面的 `Scaffold` 统一传 `contentWindowInsets = screenWindowInsets()`（即 `WindowInsets.safeDrawing`，已含状态栏、导航条、刘海与软键盘）。内容层不要再叠 `safeDrawingPadding()`/`imePadding()`，那会和 Scaffold 的内边距重复算
 
 ### 语言
 

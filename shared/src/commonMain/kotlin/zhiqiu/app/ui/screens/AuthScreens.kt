@@ -54,6 +54,7 @@ import zhiqiu.app.ui.components.HeroLockBadge
 import zhiqiu.app.ui.components.PasswordVisibilityToggle
 import zhiqiu.app.ui.components.SoftCard
 import zhiqiu.app.ui.components.ThemeToggleIcon
+import zhiqiu.app.ui.screenWindowInsets
 
 @Composable
 fun SetupMasterPasswordScreen(
@@ -88,6 +89,7 @@ fun SetupMasterPasswordScreen(
     }
 
     Scaffold(
+        contentWindowInsets = screenWindowInsets(),
         snackbarHost = { SnackbarHost(snack) },
     ) { padding ->
         Column(
@@ -238,6 +240,7 @@ fun UnlockScreen(
     }
 
     Scaffold(
+        contentWindowInsets = screenWindowInsets(),
         snackbarHost = { SnackbarHost(snack) },
         topBar = {
             TopAppBar(

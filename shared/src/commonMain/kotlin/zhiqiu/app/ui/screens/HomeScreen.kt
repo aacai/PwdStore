@@ -43,6 +43,7 @@ import zhiqiu.app.ui.components.AppIcons
 import zhiqiu.app.ui.components.EntryListCard
 import zhiqiu.app.ui.components.IconGlyph
 import zhiqiu.app.ui.components.ThemeToggleIcon
+import zhiqiu.app.ui.screenWindowInsets
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -79,6 +80,7 @@ fun HomeScreen(
     }
 
     Scaffold(
+        contentWindowInsets = screenWindowInsets(),
         topBar = {
             TopAppBar(
                 title = {

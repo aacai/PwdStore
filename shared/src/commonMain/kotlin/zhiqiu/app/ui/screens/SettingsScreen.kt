@@ -60,6 +60,7 @@ import zhiqiu.app.ui.components.AppIcons
 import zhiqiu.app.ui.components.PasswordVisibilityToggle
 import zhiqiu.app.ui.components.SettingRow
 import zhiqiu.app.ui.components.SettingsSection
+import zhiqiu.app.ui.screenWindowInsets
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -95,6 +96,7 @@ fun SettingsScreen(
     }
 
     Scaffold(
+        contentWindowInsets = screenWindowInsets(),
         snackbarHost = { SnackbarHost(snack) },
         topBar = {
             TopAppBar(

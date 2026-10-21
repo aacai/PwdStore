@@ -40,6 +40,7 @@ import zhiqiu.app.ui.components.AppIcon
 import zhiqiu.app.ui.components.AppIcons
 import zhiqiu.app.ui.components.IconGlyph
 import zhiqiu.app.ui.components.PasswordVisibilityToggle
+import zhiqiu.app.ui.screenWindowInsets
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -60,6 +61,7 @@ fun DetailScreen(
 
     if (entry == null) {
         Scaffold(
+            contentWindowInsets = screenWindowInsets(),
             topBar = {
                 TopAppBar(
                     title = { Text(s.detail) },
@@ -87,6 +89,7 @@ fun DetailScreen(
     val visibleHistory = if (showAllHistory) history else history.take(3)
 
     Scaffold(
+        contentWindowInsets = screenWindowInsets(),
         snackbarHost = { SnackbarHost(snack) },
         topBar = {
             TopAppBar(

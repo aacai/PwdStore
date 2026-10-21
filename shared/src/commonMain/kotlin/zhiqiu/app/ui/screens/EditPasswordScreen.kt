@@ -49,6 +49,7 @@ import zhiqiu.app.ui.components.AppIcon
 import zhiqiu.app.ui.components.AppIcons
 import zhiqiu.app.ui.components.IconGlyph
 import zhiqiu.app.ui.components.PasswordVisibilityToggle
+import zhiqiu.app.ui.screenWindowInsets
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -75,6 +76,7 @@ fun EditPasswordScreen(
     val scope = rememberCoroutineScope()
 
     Scaffold(
+        contentWindowInsets = screenWindowInsets(),
         snackbarHost = { SnackbarHost(snack) },
         topBar = {
             TopAppBar(
