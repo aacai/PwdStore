@@ -60,4 +60,5 @@
 - 推送 `vX.Y.Z` 标签即触发打包并创建同名 Release
 - 桌面安装包产品名为 `PwdStore`（macOS 的应用标识 `bundleID` 仍是 `zhiqiu.app`，保住系统已记住的权限与偏好归属）
 - 产物命名：`PwdStore-<版本>-android.apk`、`PwdStore-<版本>-x64.exe` / `.msi`、`PwdStore-<版本>-arm64.dmg`、`pwdstore_<版本>_<amd64|arm64>.deb`（deb 包名按 Debian 规则要求小写）
+- 桌面端只用 `packageRelease*` 任务打包（产物在 `desktopApp/build/compose/binaries/main-release`）：只有 release 链路会过 R8 裁剪，macOS dmg 从 126 MB 降到 64 MB，大头是被摘掉的 `material-icons-extended`。`desktopApp/compose-desktop.pro` 是保命规则（Room 反射建的 `*Impl`、`BundledSQLiteDriver` 的 JNI 方法、kotlinx-serialization 的 serializer），改动后必须重跑一次 `packageReleaseDmg` 并验证真机能建库、解锁、备份
 - 下载镜像：Release 作业会把每个产物上传到 [x0.at](https://x0.at/)，失败回退 [uguu.se](https://uguu.se/upload.php)，并生成 `latest.json`（版本、大小、sha256、直链）一并上传；镜像链接写进 Release 说明。x0.at 保留 3~100 天、单文件 1 GiB；uguu 只保留 3 小时（128 MiB 上限），仅作应急。镜像失败不阻断 Release

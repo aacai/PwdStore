@@ -142,13 +142,13 @@ jobs:
         include:
           - os: ubuntu-latest
             arch: x64
-            tasks: ":desktopApp:packageDeb"
+            tasks: ":desktopApp:packageReleaseDeb"
           - os: windows-latest
             arch: x64
-            tasks: ":desktopApp:packageMsi :desktopApp:packageExe"
+            tasks: ":desktopApp:packageReleaseMsi :desktopApp:packageReleaseExe"
           - os: macos-latest
             arch: arm64
-            tasks: ":desktopApp:packageDmg"
+            tasks: ":desktopApp:packageReleaseDmg"
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -174,7 +174,7 @@ jobs:
 
       - name: Add arch suffix to packages
         run: |
-          cd desktopApp/build/compose/binaries/main
+          cd desktopApp/build/compose/binaries/main-release
           for ext in deb msi exe dmg; do
             find . -type f -name "*.$ext" | while read -r f; do
               dir=$(dirname "$f")
@@ -191,10 +191,10 @@ jobs:
         with:
           name: desktop-${{ matrix.os }}-${{ matrix.arch }}
           path: |
-            desktopApp/build/compose/binaries/main/**/*.deb
-            desktopApp/build/compose/binaries/main/**/*.msi
-            desktopApp/build/compose/binaries/main/**/*.exe
-            desktopApp/build/compose/binaries/main/**/*.dmg
+            desktopApp/build/compose/binaries/main-release/**/*.deb
+            desktopApp/build/compose/binaries/main-release/**/*.msi
+            desktopApp/build/compose/binaries/main-release/**/*.exe
+            desktopApp/build/compose/binaries/main-release/**/*.dmg
           if-no-files-found: error
 
   desktop-arm:
@@ -207,7 +207,7 @@ jobs:
         include:
           - os: ubuntu-24.04-arm
             arch: arm64
-            tasks: ":desktopApp:packageDeb"
+            tasks: ":desktopApp:packageReleaseDeb"
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -233,7 +233,7 @@ jobs:
 
       - name: Add arch suffix to packages
         run: |
-          cd desktopApp/build/compose/binaries/main
+          cd desktopApp/build/compose/binaries/main-release
           for ext in deb msi exe dmg; do
             find . -type f -name "*.$ext" | while read -r f; do
               dir=$(dirname "$f")
@@ -250,10 +250,10 @@ jobs:
         with:
           name: desktop-${{ matrix.os }}-${{ matrix.arch }}
           path: |
-            desktopApp/build/compose/binaries/main/**/*.deb
-            desktopApp/build/compose/binaries/main/**/*.msi
-            desktopApp/build/compose/binaries/main/**/*.exe
-            desktopApp/build/compose/binaries/main/**/*.dmg
+            desktopApp/build/compose/binaries/main-release/**/*.deb
+            desktopApp/build/compose/binaries/main-release/**/*.msi
+            desktopApp/build/compose/binaries/main-release/**/*.exe
+            desktopApp/build/compose/binaries/main-release/**/*.dmg
           if-no-files-found: error
 
   # ----------------------------------------------------------------

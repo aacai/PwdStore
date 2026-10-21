@@ -33,5 +33,11 @@ compose.desktop {
                 bundleID = "zhiqiu.app"
             }
         }
+
+        // 只有 packageRelease* 任务才会过 R8，能摘掉没用到的 Material 图标
+        buildTypes.release.proguard {
+            optimize.set(true)
+            configurationFiles.from(project.file("compose-desktop.pro"))
+        }
     }
 }
