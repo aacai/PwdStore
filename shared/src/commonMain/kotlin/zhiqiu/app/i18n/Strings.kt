@@ -134,6 +134,9 @@ class Strings(private val zh: Boolean) {
     val aboutBody = if (zh) "本地存储 · 高强度加密 · 主密码保护" else "Local storage · strong encryption · master password protection"
 
     val errPasswordShort = if (zh) "主密码至少 4 位" else "Master password must be at least 4 characters"
+    val strengthWeak = if (zh) "强度：弱（建议 8 位以上并混合大小写/数字/符号）" else "Strength: weak (use 8+ chars with mixed case, digits, symbols)"
+    val strengthMedium = if (zh) "强度：中" else "Strength: medium"
+    val strengthStrong = if (zh) "强度：强" else "Strength: strong"
     val errPasswordMismatch = if (zh) "两次输入不一致" else "The two passwords do not match"
     val errEmptyPassword = if (zh) "请输入密码" else "Enter your password"
     val errWrongPassword = if (zh) "密码错误" else "Incorrect password"

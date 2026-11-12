@@ -65,6 +65,7 @@ actual object PlatformActions {
             onResult(null)
             return
         }
+        AppLockController.suppressFor()
         AndroidBridge.pendingPick = onResult
         val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
             addCategory(Intent.CATEGORY_OPENABLE)

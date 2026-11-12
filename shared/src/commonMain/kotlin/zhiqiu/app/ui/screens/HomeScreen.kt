@@ -179,7 +179,7 @@ fun HomeScreen(
                         EntryListCard(
                             title = e.title,
                             username = e.username,
-                            notes = e.notes,
+                            hasNotes = e.notes.isNotBlank(),
                             icon = { IconGlyph(e.iconKey, Modifier.size(22.dp)) },
                             onClick = { onOpenDetail(e.id) },
                         )

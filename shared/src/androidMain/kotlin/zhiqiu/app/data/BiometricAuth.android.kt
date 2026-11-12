@@ -46,6 +46,7 @@ actual object BiometricAuth {
         onError: (String) -> Unit,
         onCancel: () -> Unit,
     ) {
+        AppLockController.suppressFor()
         val activity = AndroidBridge.activity as? FragmentActivity
         if (activity == null || activity.isFinishing || activity.isDestroyed) {
             onError(I18n.strings.biometricNotStarted)

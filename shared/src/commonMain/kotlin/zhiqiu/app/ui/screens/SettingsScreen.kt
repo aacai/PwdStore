@@ -50,6 +50,8 @@ import zhiqiu.app.data.BackupPayload
 import zhiqiu.app.data.BiometricAuth
 import zhiqiu.app.data.FileIo
 import zhiqiu.app.data.PasswordRepository
+import zhiqiu.app.data.PasswordStrength
+import zhiqiu.app.data.PasswordStrengthMeter
 import zhiqiu.app.data.PlatformActions
 import zhiqiu.app.data.StoreFiles
 import zhiqiu.app.data.ThemeMode
@@ -558,6 +560,19 @@ private fun ChangeMasterPasswordDialog(
                     label = { Text(s.password) },
                     singleLine = true,
                     visualTransformation = if (show) VisualTransformation.None else PasswordVisualTransformation(),
+                    supportingText = {
+                        val strength = PasswordStrengthMeter.score(neu)
+                        if (neu.isNotEmpty()) {
+                            Text(
+                                when (strength) {
+                                    PasswordStrength.TOO_SHORT -> s.errPasswordShort
+                                    PasswordStrength.WEAK -> s.strengthWeak
+                                    PasswordStrength.MEDIUM -> s.strengthMedium
+                                    PasswordStrength.STRONG -> s.strengthStrong
+                                },
+                            )
+                        }
+                    },
                 )
                 OutlinedTextField(
                     value = confirm,

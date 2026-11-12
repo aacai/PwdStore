@@ -1,3 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">PwdStore</string>
+    <string name="autofill_service_label">PwdStore 自动填充</string>
+    <string name="autofill_unlock">解锁 PwdStore 以自动填充</string>
 </resources>

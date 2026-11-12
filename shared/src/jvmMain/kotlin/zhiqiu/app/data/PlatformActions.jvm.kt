@@ -32,6 +32,7 @@ actual object PlatformActions {
 
     actual fun pickFile(onResult: (ByteArray?) -> Unit) {
         val s = I18n.strings
+        AppLockController.suppressFor()
         SwingUtilities.invokeLater {
             val chooser = JFileChooser().apply {
                 dialogTitle = s.fileChooserTitle

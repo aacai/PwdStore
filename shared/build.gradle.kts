@@ -72,6 +72,7 @@ kotlin {
             implementation(libs.androidx.biometric)
             implementation(libs.androidx.fragment)
             implementation(libs.androidx.core.ktx)
+            implementation(libs.androidx.activity.compose)
         }
         commonMain.dependencies {
             implementation(libs.compose.runtime)

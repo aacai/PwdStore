@@ -48,7 +48,7 @@ fun SoftCard(
 fun EntryListCard(
     title: String,
     username: String,
-    notes: String,
+    hasNotes: Boolean,
     icon: @Composable () -> Unit,
     onClick: () -> Unit,
 ) {
@@ -76,15 +76,14 @@ fun EntryListCard(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                if (notes.isNotBlank()) {
-                    Text(
-                        notes,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
+            }
+            if (hasNotes) {
+                AppIcon(
+                    AppIcons.Notes,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         }
     }

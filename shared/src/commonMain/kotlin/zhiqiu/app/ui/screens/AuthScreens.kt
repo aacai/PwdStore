@@ -47,6 +47,8 @@ import kotlinx.coroutines.withContext
 import zhiqiu.app.data.BiometricAuth
 import zhiqiu.app.data.BiometryKind
 import zhiqiu.app.data.PasswordRepository
+import zhiqiu.app.data.PasswordStrength
+import zhiqiu.app.data.PasswordStrengthMeter
 import zhiqiu.app.i18n.I18n
 import zhiqiu.app.ui.components.AppIcon
 import zhiqiu.app.ui.components.AppIcons
@@ -119,6 +121,24 @@ fun SetupMasterPasswordScreen(
                     modifier = Modifier.fillMaxWidth(),
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                     shape = MaterialTheme.shapes.medium,
+                    supportingText = {
+                        val strength = PasswordStrengthMeter.score(password)
+                        if (password.isNotEmpty()) {
+                            Text(
+                                when (strength) {
+                                    PasswordStrength.TOO_SHORT -> s.errPasswordShort
+                                    PasswordStrength.WEAK -> s.strengthWeak
+                                    PasswordStrength.MEDIUM -> s.strengthMedium
+                                    PasswordStrength.STRONG -> s.strengthStrong
+                                },
+                                color = when (strength) {
+                                    PasswordStrength.STRONG -> MaterialTheme.colorScheme.primary
+                                    PasswordStrength.MEDIUM -> MaterialTheme.colorScheme.tertiary
+                                    else -> MaterialTheme.colorScheme.error
+                                },
+                            )
+                        }
+                    },
                 )
                 Spacer(Modifier.height(12.dp))
                 OutlinedTextField(

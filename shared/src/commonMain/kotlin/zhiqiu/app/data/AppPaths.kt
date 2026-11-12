@@ -13,6 +13,8 @@ object AppBootstrap {
         this.dataDir = dataDir
     }
 
+    fun isReady(): Boolean = dataDir.isNotBlank()
+
     fun resolveDir(): String =
         dataDir.ifBlank { AppPaths.dataDir() }
 }

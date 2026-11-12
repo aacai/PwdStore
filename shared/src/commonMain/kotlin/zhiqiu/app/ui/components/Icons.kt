@@ -21,6 +21,7 @@ import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
+import androidx.compose.material.icons.filled.Notes
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Password
 import androidx.compose.material.icons.filled.Refresh
@@ -80,6 +81,7 @@ object AppIcons {
     val Language = Icons.Filled.Language
     val Login = Icons.AutoMirrored.Filled.Login
     val Logout = Icons.AutoMirrored.Filled.Logout
+    val Notes = Icons.Filled.Notes
 
     fun forService(key: String): ImageVector = when (key) {
         "qq" -> FontAwesomeIcons.Brands.Qq
