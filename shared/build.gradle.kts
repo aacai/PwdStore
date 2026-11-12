@@ -74,6 +74,9 @@ kotlin {
             implementation(libs.androidx.core.ktx)
             implementation(libs.androidx.activity.compose)
         }
+        jvmMain.dependencies {
+            implementation(libs.koncierge.biometric)
+        }
         commonMain.dependencies {
             implementation(libs.compose.runtime)
             implementation(libs.compose.foundation)
@@ -89,6 +92,7 @@ kotlin {
             implementation(libs.androidx.room.runtime)
             implementation(libs.androidx.sqlite.bundled)
             implementation(libs.compose.icons.font.awesome)
+            implementation(libs.qrose)
             implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0")
         }
         named("commonMain") {

@@ -21,6 +21,7 @@ class Strings(private val zh: Boolean) {
     val processing = if (zh) "处理中…" else "Working…"
     val cdBack = if (zh) "返回" else "Back"
     val cdCopy = if (zh) "复制" else "Copy"
+    val cdQrCode = if (zh) "二维码" else "QR code"
     val cdEdit = if (zh) "编辑" else "Edit"
     val cdDelete = if (zh) "删除" else "Delete"
     val cdSettings = if (zh) "设置" else "Settings"
@@ -105,7 +106,10 @@ class Strings(private val zh: Boolean) {
     val nothingToExport = if (zh) "暂无密码数据可导出" else "Nothing to export yet"
     val exportPreview = if (zh) "导出预览" else "Export preview"
     val confirmExport = if (zh) "确认导出" else "Export"
+    val qrFromText = if (zh) "内容二维码" else "Content QR"
+    val qrFromFile = if (zh) "下载链接二维码" else "Download-link QR"
     val encryptedBackup = if (zh) "加密备份" else "Encrypted backup"
+    val encryptedBackupQr = if (zh) "加密备份二维码" else "Encrypted backup QR"
     val setMasterFirst = if (zh) "请先设置主密码" else "Set a master password first"
     val importData = if (zh) "导入数据" else "Import data"
     val import = if (zh) "导入" else "Import"
@@ -126,6 +130,12 @@ class Strings(private val zh: Boolean) {
     val copyFullData = if (zh) "复制完整数据" else "Copy all data"
     val copiedFullData = if (zh) "已复制完整数据" else "All data copied"
     val copied = if (zh) "已复制" else "Copied"
+    val qrTextTitle = if (zh) "内容二维码" else "Content QR code"
+    val qrLinkTitle = if (zh) "下载链接二维码" else "Download-link QR code"
+    val qrUploading = if (zh) "正在上传并生成链接…" else "Uploading to get a download link…"
+    val qrUploadFailed = if (zh) "上传失败，无法生成下载链接" else "Upload failed — can't build a download link"
+    val qrTooLong = if (zh) "内容过长，无法生成可扫码的二维码" else "Content is too long for a scannable QR code"
+    val qrLinkHint = if (zh) "链接由临时镜像托管，可能过期" else "Hosted on a temporary mirror; the link may expire"
     val storageDetails = if (zh) "存储详情" else "Storage details"
     val storageDir = if (zh) "目录" else "Directory"
     val storageDb = if (zh) "数据库" else "Database"
@@ -157,6 +167,8 @@ class Strings(private val zh: Boolean) {
     val biometricUsePassword = if (zh) "使用密码" else "Use password"
     val biometricNoCredential = if (zh) "生物识别成功，但本地凭证不可用，请输入主密码" else "Biometrics verified, but the local credential is unavailable — enter your master password"
     val biometricPlatformUnsupported = if (zh) "当前平台不支持生物识别" else "This platform does not support biometrics"
+    val biometricLocked = if (zh) "生物识别已锁定，请稍后再试或使用主密码" else "Biometrics locked — try again later or use your master password"
+    val biometricAuthFailed = if (zh) "生物识别验证失败" else "Biometric authentication failed"
 
     val exportTitle = if (zh) "密码导出" else "Password export"
     val exportTime = if (zh) "导出时间" else "Exported at"
@@ -175,9 +187,17 @@ class Strings(private val zh: Boolean) {
     fun setupFailedWith(reason: String): String = if (zh) "设置失败: $reason" else "Setup failed: $reason"
 
     fun sensorName(kind: BiometryKind): String = when (kind) {
-        BiometryKind.FINGERPRINT -> if (zh) "指纹" else "Fingerprint"
+        BiometryKind.FINGERPRINT -> if (zh) {
+            if (zhiqiu.app.data.PlatformActions.isDesktop()) "Touch ID" else "指纹"
+        } else {
+            if (zhiqiu.app.data.PlatformActions.isDesktop()) "Touch ID" else "Fingerprint"
+        }
         BiometryKind.FACE -> if (zh) "面容" else "Face ID"
-        BiometryKind.OTHER, BiometryKind.NONE -> if (zh) "生物识别" else "Biometrics"
+        BiometryKind.OTHER, BiometryKind.NONE -> if (zh) {
+            if (zhiqiu.app.data.PlatformActions.isDesktop()) "Windows Hello" else "生物识别"
+        } else {
+            if (zhiqiu.app.data.PlatformActions.isDesktop()) "Windows Hello" else "Biometrics"
+        }
     }
 
     fun biometricUnlockFor(kind: BiometryKind): String =

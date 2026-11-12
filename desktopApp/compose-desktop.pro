@@ -8,6 +8,11 @@
 # BundledSQLiteDriver 的 native 方法按 JNI 符号名绑定，改名后 libsqlite 加载即失败
 -keep class androidx.sqlite.driver.bundled.** { *; }
 
+# 桌面生物识别：JNA + koncierge 原生库
+-keep class com.sun.jna.** { *; }
+-keep class com.ucasoft.koncierge.** { *; }
+-keepclassmembers class * extends com.sun.jna.** { public *; }
+
 # kotlinx-serialization 生成的 serializer 与 Companion 会被反射查找
 -keepattributes *Annotation*, InnerClasses
 -dontnote kotlinx.serialization.**

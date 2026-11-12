@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.Notes
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Password
+import androidx.compose.material.icons.filled.QrCode
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
@@ -64,6 +65,7 @@ object AppIcons {
     val Edit = Icons.Filled.Edit
     val Delete = Icons.Filled.Delete
     val Copy = Icons.Filled.ContentCopy
+    val QrCode = Icons.Filled.QrCode
     val Refresh = Icons.Filled.Refresh
     val Search = Icons.Filled.Search
     val Lock = Icons.Filled.Lock

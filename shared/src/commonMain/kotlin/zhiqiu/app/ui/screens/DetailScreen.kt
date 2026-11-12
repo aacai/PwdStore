@@ -40,6 +40,7 @@ import zhiqiu.app.ui.components.AppIcon
 import zhiqiu.app.ui.components.AppIcons
 import zhiqiu.app.ui.components.IconGlyph
 import zhiqiu.app.ui.components.PasswordVisibilityToggle
+import zhiqiu.app.ui.components.QrCodeDialog
 import zhiqiu.app.ui.screenWindowInsets
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -56,6 +57,7 @@ fun DetailScreen(
     var showPwd by remember { mutableStateOf(false) }
     var showAllHistory by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(0) }
+    var qrPayload by remember { mutableStateOf<String?>(null) }
     val snack = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
@@ -126,7 +128,14 @@ fun DetailScreen(
                 }
             }
             Spacer(Modifier.height(16.dp))
-            FieldRow(s.username, entry.username, copyable = true, snack = snack, scope = scope)
+            FieldRow(
+                s.username,
+                entry.username,
+                copyable = true,
+                snack = snack,
+                scope = scope,
+                onQr = { qrPayload = entry.username },
+            )
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.weight(1f)) {
                     Text(s.password, style = MaterialTheme.typography.labelMedium)
@@ -139,13 +148,23 @@ fun DetailScreen(
                     PlatformActions.copyToClipboard(entry.password)
                     scope.launch { snack.showSnackbar(s.copied) }
                 }) { AppIcon(AppIcons.Copy, s.cdCopy) }
+                IconButton(onClick = { qrPayload = entry.password }) {
+                    AppIcon(AppIcons.QrCode, s.cdQrCode)
+                }
             }
             Spacer(Modifier.height(12.dp))
             Text("${s.category}: ${s.categoryLabel(entry.categoryEnum())}")
             Text("${s.created}: ${BackupManager.formatDateTime(entry.createdAt)}")
             if (entry.notes.isNotBlank()) {
                 Spacer(Modifier.height(8.dp))
-                FieldRow(s.notes, entry.notes, copyable = true, snack = snack, scope = scope)
+                FieldRow(
+                    s.notes,
+                    entry.notes,
+                    copyable = true,
+                    snack = snack,
+                    scope = scope,
+                    onQr = { qrPayload = entry.notes },
+                )
             }
             if (history.isNotEmpty()) {
                 Spacer(Modifier.height(16.dp))
@@ -197,6 +216,18 @@ fun DetailScreen(
             },
         )
     }
+
+    qrPayload?.let { payload ->
+        QrCodeDialog(
+            title = s.qrTextTitle,
+            payload = payload,
+            onCopy = {
+                PlatformActions.copyToClipboard(payload)
+                scope.launch { snack.showSnackbar(s.copied) }
+            },
+            onDismiss = { qrPayload = null },
+        )
+    }
 }
 
 @Composable
@@ -206,6 +237,7 @@ private fun FieldRow(
     copyable: Boolean,
     snack: SnackbarHostState,
     scope: kotlinx.coroutines.CoroutineScope,
+    onQr: (() -> Unit)? = null,
 ) {
     val s = I18n.strings
     Row(
@@ -221,6 +253,9 @@ private fun FieldRow(
                 PlatformActions.copyToClipboard(value)
                 scope.launch { snack.showSnackbar(s.copied) }
             }) { AppIcon(AppIcons.Copy, s.cdCopy) }
+        }
+        if (onQr != null) {
+            IconButton(onClick = onQr) { AppIcon(AppIcons.QrCode, s.cdQrCode) }
         }
     }
 }

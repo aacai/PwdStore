@@ -49,6 +49,7 @@ import zhiqiu.app.data.BackupManager
 import zhiqiu.app.data.BackupPayload
 import zhiqiu.app.data.BiometricAuth
 import zhiqiu.app.data.FileIo
+import zhiqiu.app.data.MirrorUpload
 import zhiqiu.app.data.PasswordRepository
 import zhiqiu.app.data.PasswordStrength
 import zhiqiu.app.data.PasswordStrengthMeter
@@ -60,6 +61,7 @@ import zhiqiu.app.i18n.I18n
 import zhiqiu.app.ui.components.AppIcon
 import zhiqiu.app.ui.components.AppIcons
 import zhiqiu.app.ui.components.PasswordVisibilityToggle
+import zhiqiu.app.ui.components.QrCodeDialog
 import zhiqiu.app.ui.components.SettingRow
 import zhiqiu.app.ui.components.SettingsSection
 import zhiqiu.app.ui.screenWindowInsets
@@ -87,10 +89,44 @@ fun SettingsScreen(
     var pendingImportBytes by remember { mutableStateOf<ByteArray?>(null) }
     var storageDialog by remember { mutableStateOf(false) }
     var aboutDialog by remember { mutableStateOf(false) }
+    var qrText by remember { mutableStateOf<String?>(null) }
+    var qrLink by remember { mutableStateOf<String?>(null) }
+    var qrLoading by remember { mutableStateOf(false) }
+    var qrError by remember { mutableStateOf<String?>(null) }
+    var qrOpen by remember { mutableStateOf(false) }
     val snack = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val hardware = remember { BiometricAuth.hardwareSupported() }
     val bioReady = remember { BiometricAuth.isAvailable() }
+
+    fun showTextQr(text: String) {
+        qrText = text
+        qrLink = null
+        qrError = null
+        qrLoading = false
+        qrOpen = true
+    }
+
+    fun showFileLinkQr(fileName: String, bytes: ByteArray) {
+        qrText = null
+        qrLink = null
+        qrError = null
+        qrLoading = true
+        qrOpen = true
+        scope.launch {
+            runCatching {
+                withContext(Dispatchers.Default) {
+                    MirrorUpload.upload(fileName, bytes)
+                }
+            }.onSuccess {
+                qrLink = it
+                qrLoading = false
+            }.onFailure {
+                qrError = it.message ?: s.qrUploadFailed
+                qrLoading = false
+            }
+        }
+    }
 
     fun save(config: AuthConfig) {
         auth = config
@@ -250,6 +286,28 @@ fun SettingsScreen(
                     },
                 )
                 SettingRow(
+                    icon = AppIcons.QrCode,
+                    title = s.encryptedBackupQr,
+                    subtitle = s.qrLinkHint,
+                    onClick = {
+                        val pwd = AppSession.session.masterPassword
+                        if (pwd == null) {
+                            scope.launch { snack.showSnackbar(s.setMasterFirst) }
+                        } else {
+                            scope.launch {
+                                runCatching {
+                                    val bytes = withContext(Dispatchers.Default) {
+                                        BackupManager.createEncryptedBackup(repo.getAllDecrypted(), pwd)
+                                    }
+                                    val name = BackupManager.backupFileName()
+                                    FileIo.writeBytes(FileIo.join(repo.dataPath(), name), bytes)
+                                    showFileLinkQr(name, bytes)
+                                }.onFailure { snack.showSnackbar(it.message ?: s.backupFailed) }
+                            }
+                        }
+                    },
+                )
+                SettingRow(
                     icon = AppIcons.Import,
                     title = s.importData,
                     onClick = {
@@ -325,17 +383,56 @@ fun SettingsScreen(
                 }
             },
             confirmButton = {
-                TextButton(onClick = {
-                    val name = BackupManager.exportTxtFileName()
-                    val path = FileIo.join(repo.dataPath(), name)
-                    FileIo.writeText(path, text)
-                    PlatformActions.shareOrRevealFile(path, "text/plain")
-                    exportPreview = null
-                    scope.launch { snack.showSnackbar(s.exportedTo(name)) }
-                }) { Text(s.confirmExport) }
+                Row {
+                    TextButton(onClick = {
+                        showTextQr(text)
+                    }) { Text(s.qrFromText) }
+                    TextButton(onClick = {
+                        val name = BackupManager.exportTxtFileName()
+                        val bytes = text.encodeToByteArray()
+                        val path = FileIo.join(repo.dataPath(), name)
+                        FileIo.writeBytes(path, bytes)
+                        showFileLinkQr(name, bytes)
+                    }) { Text(s.qrFromFile) }
+                    TextButton(onClick = {
+                        val name = BackupManager.exportTxtFileName()
+                        val path = FileIo.join(repo.dataPath(), name)
+                        FileIo.writeText(path, text)
+                        PlatformActions.shareOrRevealFile(path, "text/plain")
+                        exportPreview = null
+                        scope.launch { snack.showSnackbar(s.exportedTo(name)) }
+                    }) { Text(s.confirmExport) }
+                }
             },
             dismissButton = {
                 TextButton(onClick = { exportPreview = null }) { Text(s.cancel) }
+            },
+        )
+    }
+
+    if (qrOpen) {
+        val payload = qrLink ?: qrText
+        QrCodeDialog(
+            title = if (qrLink != null || qrLoading || (qrError != null && qrText == null)) {
+                s.qrLinkTitle
+            } else {
+                s.qrTextTitle
+            },
+            payload = payload,
+            loading = qrLoading,
+            error = qrError,
+            onCopy = payload?.let { text ->
+                {
+                    PlatformActions.copyToClipboard(text)
+                    scope.launch { snack.showSnackbar(s.copied) }
+                }
+            },
+            onDismiss = {
+                qrOpen = false
+                qrLoading = false
+                qrError = null
+                qrText = null
+                qrLink = null
             },
         )
     }
