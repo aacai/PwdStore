@@ -34,3 +34,9 @@ plugins {
 include(":androidApp")
 include(":desktopApp")
 include(":shared")
+
+// okui 子模块中的组件库与 oink 主题（oink 依赖同模块下的 applewidgets-ui）
+include(":applewidgets-ui")
+project(":applewidgets-ui").projectDir = file("okui/applewidgets-ui")
+include(":oink")
+project(":oink").projectDir = file("okui/oink")

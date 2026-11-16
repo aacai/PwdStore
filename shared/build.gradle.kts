@@ -94,6 +94,8 @@ kotlin {
             implementation(libs.compose.icons.font.awesome)
             implementation(libs.qrose)
             implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0")
+            // oink 主题（okui 子模块，自带 applewidgets-ui）
+            implementation(project(":oink"))
         }
         named("commonMain") {
             kotlin.srcDir(generateAppInfo)
