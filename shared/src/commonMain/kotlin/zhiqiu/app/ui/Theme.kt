@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
 import androidx.compose.material3.Typography
@@ -15,63 +16,68 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import zhiqiu.app.data.ThemeMode
+import zhiqiu.applewidgets.kmp.oink.theme.OinkAccent
+import zhiqiu.applewidgets.kmp.oink.theme.OinkColors
+import zhiqiu.applewidgets.kmp.oink.theme.OinkTextStyles
+import zhiqiu.applewidgets.kmp.oink.theme.OinkTheme
 
-// 暗色：与添加密码页 Scaffold 默认观感一致的扁平深色
-private val DarkBg = Color(0xFF121212)
-private val DarkSurface = Color(0xFF1E1E1E)
-private val DarkVariant = Color(0xFF2A2A2A)
-private val Teal = Color(0xFF2DD4BF)
-private val OnTeal = Color(0xFF003731)
+// oink 令牌 → Material3 语义槽：既有 M3 组件直接吃 oink 的墨色/表面/强调色，不再走 MD3 默认紫
+private fun oinkMaterialColors(c: OinkColors, dark: Boolean): ColorScheme {
+    val base = if (dark) darkColorScheme() else lightColorScheme()
+    return base.copy(
+        primary = c.accent,
+        onPrimary = c.onAccent,
+        primaryContainer = c.accentSoft,
+        onPrimaryContainer = c.accentText,
+        inversePrimary = c.accentDeep,
+        secondary = c.accentDeep,
+        onSecondary = c.onAccent,
+        secondaryContainer = c.accentTint,
+        onSecondaryContainer = c.accentText,
+        tertiary = c.info,
+        onTertiary = c.onInverse,
+        tertiaryContainer = c.infoSoft,
+        onTertiaryContainer = c.infoText,
+        background = c.bg,
+        onBackground = c.text,
+        surface = c.card,
+        onSurface = c.text,
+        surfaceVariant = c.well,
+        onSurfaceVariant = c.text2,
+        surfaceTint = c.accent,
+        surfaceContainerLowest = c.bg,
+        surfaceContainerLow = c.surface,
+        surfaceContainer = c.card,
+        surfaceContainerHigh = c.raised,
+        surfaceContainerHighest = c.well,
+        outline = c.line2,
+        outlineVariant = c.line,
+        error = c.danger,
+        onError = c.onInverse,
+        errorContainer = c.dangerSoft,
+        onErrorContainer = c.dangerText,
+        inverseSurface = c.inverse,
+        inverseOnSurface = c.onInverse,
+        scrim = c.scrim,
+    )
+}
 
-private val LightColors = lightColorScheme(
-    primary = Color(0xFF0F766E),
-    onPrimary = Color.White,
-    primaryContainer = Color(0xFFCCFBF1),
-    onPrimaryContainer = Color(0xFF134E4A),
-    secondary = Color(0xFF0E7490),
-    onSecondary = Color.White,
-    background = Color(0xFFF8FAFC),
-    onBackground = Color(0xFF0F172A),
-    surface = Color.White,
-    onSurface = Color(0xFF0F172A),
-    surfaceVariant = Color(0xFFE2E8F0),
-    onSurfaceVariant = Color(0xFF475569),
-    outline = Color(0xFF94A3B8),
-    error = Color(0xFFDC2626),
-)
-
-private val DarkColors = darkColorScheme(
-    primary = Teal,
-    onPrimary = OnTeal,
-    primaryContainer = Color(0xFF0F766E),
-    onPrimaryContainer = Color(0xFFCCFBF1),
-    secondary = Color(0xFF5EEAD4),
-    onSecondary = OnTeal,
-    background = DarkBg,
-    onBackground = Color(0xFFE8E8E8),
-    surface = DarkSurface,
-    onSurface = Color(0xFFE8E8E8),
-    surfaceVariant = DarkVariant,
-    onSurfaceVariant = Color(0xFFB0B0B0),
-    outline = Color(0xFF6B6B6B),
-    error = Color(0xFFF87171),
-)
-
-private val AppTypography = Typography(
-    headlineLarge = TextStyle(fontWeight = FontWeight.SemiBold, fontSize = 28.sp, letterSpacing = (-0.5).sp),
-    headlineSmall = TextStyle(fontWeight = FontWeight.SemiBold, fontSize = 22.sp),
-    titleLarge = TextStyle(fontWeight = FontWeight.SemiBold, fontSize = 20.sp),
-    titleMedium = TextStyle(fontWeight = FontWeight.Medium, fontSize = 16.sp),
-    bodyLarge = TextStyle(fontWeight = FontWeight.Normal, fontSize = 16.sp, lineHeight = 24.sp),
-    bodyMedium = TextStyle(fontWeight = FontWeight.Normal, fontSize = 14.sp, lineHeight = 20.sp),
-    bodySmall = TextStyle(fontWeight = FontWeight.Normal, fontSize = 12.sp, lineHeight = 16.sp),
-    labelLarge = TextStyle(fontWeight = FontWeight.Medium, fontSize = 14.sp),
+private fun oinkMaterialTypography(t: OinkTextStyles): Typography = Typography(
+    headlineLarge = t.h1,
+    headlineMedium = t.h2,
+    headlineSmall = t.h3,
+    titleLarge = t.h3,
+    titleMedium = t.h4,
+    titleSmall = t.label,
+    bodyLarge = t.bodyLarge,
+    bodyMedium = t.body,
+    bodySmall = t.caption,
+    labelLarge = t.label,
+    labelMedium = t.caption,
+    labelSmall = t.micro,
 )
 
 private val AppShapes = Shapes(
@@ -89,12 +95,14 @@ fun PwdTheme(mode: ThemeMode, content: @Composable () -> Unit) {
         ThemeMode.DARK -> true
         ThemeMode.SYSTEM -> isSystemInDarkTheme()
     }
-    MaterialTheme(
-        colorScheme = if (dark) DarkColors else LightColors,
-        typography = AppTypography,
-        shapes = AppShapes,
-        content = content,
-    )
+    OinkTheme(darkTheme = dark, accent = OinkAccent.Pink) {
+        MaterialTheme(
+            colorScheme = oinkMaterialColors(OinkTheme.colors, dark),
+            typography = oinkMaterialTypography(OinkTheme.textStyles),
+            shapes = AppShapes,
+            content = content,
+        )
+    }
     SideEffect { SystemBars.setAppearance(dark) }
 }
 
@@ -107,7 +115,7 @@ fun AppBackground(content: @Composable () -> Unit) {
     Box(
         Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background),
+            .background(OinkTheme.colors.bg),
         content = { content() },
     )
 }
