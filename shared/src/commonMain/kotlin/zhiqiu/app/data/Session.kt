@@ -23,6 +23,7 @@ object MetaKeys {
     const val THEME = "theme"
     const val LANGUAGE = "language"
     const val GENERATOR = "generator"
+    const val SECURITY = "security_question"
 }
 
 class Session {

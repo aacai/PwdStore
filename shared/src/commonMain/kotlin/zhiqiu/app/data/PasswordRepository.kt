@@ -17,8 +17,19 @@ class PasswordRepository(
 ) {
     private val cache = mutableScatterMapOf<String, PasswordEntry>()
     private var loaded = false
+    private var securityFailures = 0
+    private var securityBlockedUntil = 0L
     private fun dir() = AppBootstrap.resolveDir()
     private fun dao(): PwdDao = DbProvider.dao()
+
+    companion object {
+        /** 密保答案连续错误达到该次数后进入冷却。 */
+        const val SECURITY_MAX_FAILURES = 5
+        /** 冷却时长，避免密保答案被暴力枚举。 */
+        const val SECURITY_LOCK_MS = 30_000L
+        /** 密保答案最少字符数，过短答案可被离线穷举。 */
+        const val SECURITY_MIN_ANSWER_LENGTH = 2
+    }
 
     private fun <T> db(block: suspend PwdDao.() -> T): T =
         runBlocking(Dispatchers.IO) { dao().block() }
@@ -69,6 +80,8 @@ class PasswordRepository(
         val auth = readAuthConfig()
         db {
             upsertMeta(MetaEntity(MetaKeys.MASTER, JsonX.json.encodeToString(MasterMeta.serializer(), meta)))
+            // 包裹的是旧主密码，改密码后立即失效
+            deleteMeta(MetaKeys.SECURITY)
             deleteAllEntries()
             upsertEntries(encrypted.map { it.toEntity() })
             if (auth.enabled || auth.biometricEnabled) {
@@ -196,6 +209,85 @@ class PasswordRepository(
 
     fun touchAuthTimestamp() {
         db { upsertMeta(MetaEntity(MetaKeys.AUTH_TS, PlatformTime.nowMillis().toString())) }
+    }
+
+    fun readSecurityQuestion(): SecurityQuestionConfig? {
+        val raw = db { getMeta(MetaKeys.SECURITY) } ?: return null
+        return runCatching { JsonX.json.decodeFromString(SecurityQuestionConfig.serializer(), raw) }.getOrNull()
+    }
+
+    fun writeSecurityQuestion(questionKey: String, answer: String) {
+        require(session.masterPassword != null) { I18n.strings.notUnlocked }
+        require(questionKey in SecurityQuestions.presetKeys) { I18n.strings.errSecurityAnswerBlank }
+        val normalized = SecurityQuestions.normalize(answer)
+        require(normalized.isNotEmpty()) { I18n.strings.errSecurityAnswerBlank }
+        // 答案可离线爆破后直接解出主密码，过短的答案等于没有密保
+        require(normalized.length >= SECURITY_MIN_ANSWER_LENGTH) { I18n.strings.errSecurityAnswerTooShort }
+        val salt = Crypto.randomBytes(Crypto.SALT_BYTES)
+        val answerKey = Crypto.deriveKey(normalized, salt)
+        val config = SecurityQuestionConfig(
+            questionKey = questionKey,
+            answerVerifier = Crypto.verifierOf(answerKey),
+            answerSalt = Crypto.encodeBase64(salt),
+            wrappedSecret = Crypto.encrypt(session.masterPassword!!, answerKey),
+        )
+        db {
+            upsertMeta(MetaEntity(MetaKeys.SECURITY, JsonX.json.encodeToString(SecurityQuestionConfig.serializer(), config)))
+        }
+        securityFailures = 0
+        securityBlockedUntil = 0L
+    }
+
+    fun clearSecurityQuestion() {
+        db { deleteMeta(MetaKeys.SECURITY) }
+        securityFailures = 0
+        securityBlockedUntil = 0L
+    }
+
+    /** 答案正确时解出被包裹的主密码返回；错误返回 null。不解锁会话。 */
+    fun verifySecurityAnswer(answer: String): String? {
+        if (securityLockRemainingMs() > 0) return null
+        val config = readSecurityQuestion() ?: return null
+        val normalized = SecurityQuestions.normalize(answer)
+        if (normalized.isEmpty()) return null
+        val salt = Crypto.decodeBase64(config.answerSalt)
+        val answerKey = Crypto.deriveKey(normalized, salt)
+        if (Crypto.verifierOf(answerKey) != config.answerVerifier) {
+            registerSecurityFailure()
+            return null
+        }
+        val recovered = runCatching { Crypto.decrypt(config.wrappedSecret, answerKey) }.getOrNull()
+        if (recovered == null) {
+            registerSecurityFailure()
+            return null
+        }
+        securityFailures = 0
+        return recovered
+    }
+
+    /**
+     * 密保找回入口：答案正确时校验并解锁主密码，返回主密码；否则返回 null。
+     * 解锁只发生在答案真正通过之后，答案错误不会影响当前会话。
+     */
+    fun recoverMasterPassword(answer: String): String? {
+        val recovered = verifySecurityAnswer(answer) ?: return null
+        if (!verifyMasterPassword(recovered)) return null
+        return recovered
+    }
+
+    /** 密保答案连续错误达到上限后短暂锁定，避免暴力猜测。剩余锁定毫秒数，0 表示未锁定。 */
+    fun securityLockRemainingMs(): Long =
+        (securityBlockedUntil - PlatformTime.nowMillis()).coerceAtLeast(0L)
+
+    /** 密保答案剩余可尝试次数。 */
+    fun securityAttemptsLeft(): Int = (SECURITY_MAX_FAILURES - securityFailures).coerceAtLeast(0)
+
+    private fun registerSecurityFailure() {
+        securityFailures += 1
+        if (securityFailures >= SECURITY_MAX_FAILURES) {
+            securityFailures = 0
+            securityBlockedUntil = PlatformTime.nowMillis() + SECURITY_LOCK_MS
+        }
     }
 
     fun clearPasswordFree() {

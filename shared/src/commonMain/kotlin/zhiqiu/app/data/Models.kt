@@ -89,6 +89,35 @@ data class MasterMeta(
     val iterations: Int = Crypto.ITERATIONS,
 )
 
+/**
+ * 密保问题找回：questionKey 对应 Strings.securityQuestionText 的预设问题；
+ * 答案规范化（trim+小写）后经 PBKDF2 派生密钥，verifier 存派生校验值，
+ * wrappedSecret 是用答案派生密钥包裹的主密码（改主密码后失效并清除）。
+ */
+@Serializable
+data class SecurityQuestionConfig(
+    val questionKey: String,
+    val answerVerifier: String,
+    val answerSalt: String,
+    val wrappedSecret: String,
+)
+
+object SecurityQuestions {
+    /** 预置问题全集，顺序即设置页展示顺序，与 Strings.securityQuestionText 对应。 */
+    val presetKeys = listOf(
+        "birth_city",
+        "mother_name",
+        "first_pet",
+        "first_school",
+        "first_teacher",
+        "childhood_friend",
+        "favorite_food",
+        "favorite_movie",
+    )
+
+    fun normalize(answer: String): String = answer.trim().lowercase()
+}
+
 @Serializable
 data class BackupMetadata(
     val version: String = "1.0.0",

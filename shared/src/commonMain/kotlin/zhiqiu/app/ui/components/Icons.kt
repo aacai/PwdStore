@@ -30,13 +30,20 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.LocalContentColor
+import zhiqiu.applewidgets.kmp.basic.IconButton
+import zhiqiu.applewidgets.kmp.oink.basic.OinkIcon
+import zhiqiu.applewidgets.kmp.oink.theme.OinkTheme
+import zhiqiu.applewidgets.kmp.theme.LocalContentColor
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.unit.dp
 import compose.icons.FontAwesomeIcons
 import compose.icons.fontawesomeicons.Brands
 import compose.icons.fontawesomeicons.brands.Apple
@@ -109,7 +116,7 @@ fun AppIcon(
     modifier: Modifier = Modifier,
     tint: Color = LocalContentColor.current,
 ) {
-    Icon(
+    OinkIcon(
         imageVector = imageVector,
         contentDescription = contentDescription,
         modifier = modifier,
@@ -124,10 +131,19 @@ fun PasswordVisibilityToggle(
     onToggle: () -> Unit,
 ) {
     val s = I18n.strings
-    IconButton(onClick = onToggle, modifier = modifier) {
+    // 与 OinkTextField 内置 clear 按钮同尺寸，避免塞进 trailing 时被外层 padding 推歪
+    androidx.compose.foundation.layout.Box(
+        modifier = modifier
+            .size(22.dp)
+            .clip(CircleShape)
+            .clickable(onClick = onToggle),
+        contentAlignment = Alignment.Center,
+    ) {
         AppIcon(
             imageVector = if (visible) AppIcons.VisibilityOff else AppIcons.Visibility,
             contentDescription = if (visible) s.cdHidePassword else s.cdShowPassword,
+            modifier = Modifier.size(14.dp),
+            tint = OinkTheme.colors.text3,
         )
     }
 }

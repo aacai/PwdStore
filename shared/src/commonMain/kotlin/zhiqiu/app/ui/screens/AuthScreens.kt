@@ -13,21 +13,22 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
+import zhiqiu.app.ui.components.AlertDialog
+import zhiqiu.app.ui.components.Button
+import zhiqiu.app.ui.components.FilledTonalButton
+import zhiqiu.applewidgets.kmp.basic.IconButton
+import zhiqiu.applewidgets.kmp.oink.theme.OinkTheme
+import zhiqiu.applewidgets.kmp.theme.AppleWidgetsTheme
+import zhiqiu.app.ui.components.OutlinedTextField
+import zhiqiu.app.ui.components.AppScaffold as Scaffold
+import zhiqiu.app.ui.components.AppSnackbarHost as SnackbarHost
+import zhiqiu.app.ui.components.AppSnackbarHostState as SnackbarHostState
+import zhiqiu.applewidgets.kmp.basic.Surface
+import zhiqiu.applewidgets.kmp.basic.SurfaceDefaults
+import zhiqiu.applewidgets.kmp.basic.Text
+import zhiqiu.app.ui.components.TextButton
+import zhiqiu.app.ui.components.AppTopBar as TopAppBar
+import zhiqiu.app.ui.components.AppTopBarDefaults as TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -42,6 +43,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import zhiqiu.app.data.BiometricAuth
@@ -101,12 +103,12 @@ fun SetupMasterPasswordScreen(
         ) {
             HeroLockBadge()
             Spacer(Modifier.height(20.dp))
-            Text(s.setupTitle, style = MaterialTheme.typography.headlineSmall)
+            Text(s.setupTitle, style = OinkTheme.textStyles.h3)
             Spacer(Modifier.height(8.dp))
             Text(
                 s.setupHint,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = OinkTheme.textStyles.body,
+                color = OinkTheme.colors.text2,
             )
             Spacer(Modifier.height(24.dp))
             SoftCard(modifier = Modifier.fillMaxWidth()) {
@@ -115,12 +117,12 @@ fun SetupMasterPasswordScreen(
                     onValueChange = { password = it },
                     label = { Text(s.masterPassword) },
                     singleLine = true,
-                    leadingIcon = { AppIcon(AppIcons.Lock, null) },
+                    leadingIcon = AppIcons.Lock,
                     visualTransformation = if (show1) VisualTransformation.None else PasswordVisualTransformation(),
                     trailingIcon = { PasswordVisibilityToggle(show1) { show1 = !show1 } },
                     modifier = Modifier.fillMaxWidth(),
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-                    shape = MaterialTheme.shapes.medium,
+                    shape = AppleWidgetsTheme.componentStyles.controlShape,
                     supportingText = {
                         val strength = PasswordStrengthMeter.score(password)
                         if (password.isNotEmpty()) {
@@ -132,9 +134,9 @@ fun SetupMasterPasswordScreen(
                                     PasswordStrength.STRONG -> s.strengthStrong
                                 },
                                 color = when (strength) {
-                                    PasswordStrength.STRONG -> MaterialTheme.colorScheme.primary
-                                    PasswordStrength.MEDIUM -> MaterialTheme.colorScheme.tertiary
-                                    else -> MaterialTheme.colorScheme.error
+                                    PasswordStrength.STRONG -> OinkTheme.colors.accent
+                                    PasswordStrength.MEDIUM -> OinkTheme.colors.info
+                                    else -> OinkTheme.colors.danger
                                 },
                             )
                         }
@@ -146,20 +148,20 @@ fun SetupMasterPasswordScreen(
                     onValueChange = { confirm = it },
                     label = { Text(s.confirmPassword) },
                     singleLine = true,
-                    leadingIcon = { AppIcon(AppIcons.Lock, null) },
+                    leadingIcon = AppIcons.Lock,
                     visualTransformation = if (show2) VisualTransformation.None else PasswordVisualTransformation(),
                     trailingIcon = { PasswordVisibilityToggle(show2) { show2 = !show2 } },
                     modifier = Modifier.fillMaxWidth(),
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                     keyboardActions = KeyboardActions(onDone = { submit() }),
-                    shape = MaterialTheme.shapes.medium,
+                    shape = AppleWidgetsTheme.componentStyles.controlShape,
                 )
                 Spacer(Modifier.height(20.dp))
                 Button(
                     onClick = { submit() },
                     enabled = !loading,
                     modifier = Modifier.fillMaxWidth().height(48.dp),
-                    shape = MaterialTheme.shapes.medium,
+                    shape = AppleWidgetsTheme.componentStyles.controlShape,
                 ) {
                     Text(if (loading) s.processing else s.startUsing)
                 }
@@ -168,11 +170,11 @@ fun SetupMasterPasswordScreen(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UnlockScreen(
     repo: PasswordRepository,
     onUnlocked: () -> Unit,
+    onRecovered: (String) -> Unit,
     onReset: () -> Unit,
     onToggleTheme: () -> Unit,
 ) {
@@ -181,6 +183,8 @@ fun UnlockScreen(
     var show by remember { mutableStateOf(false) }
     var loading by remember { mutableStateOf(false) }
     var confirmReset by remember { mutableStateOf(0) }
+    var showVerify by remember { mutableStateOf(false) }
+    val hasSecurityQuestion = remember { repo.readSecurityQuestion() != null }
     val snack = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     var auth by remember { mutableStateOf(repo.readAuthConfig()) }
@@ -267,7 +271,7 @@ fun UnlockScreen(
                 title = { Text(s.unlock) },
                 actions = { IconButton(onClick = onToggleTheme) { ThemeToggleIcon() } },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
+                    containerColor = OinkTheme.colors.bg,
                 ),
             )
         },
@@ -283,11 +287,11 @@ fun UnlockScreen(
                 HeroLockBadge()
             }
             Spacer(Modifier.height(16.dp))
-            Text(s.welcomeBack, style = MaterialTheme.typography.headlineSmall)
+            Text(s.welcomeBack, style = OinkTheme.textStyles.h3)
             Text(
                 if (canBio) s.biometricUnlockFor(kind) else s.unlockHint,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = OinkTheme.textStyles.body,
+                color = OinkTheme.colors.text2,
             )
             Spacer(Modifier.height(24.dp))
             SoftCard(modifier = Modifier.fillMaxWidth()) {
@@ -296,27 +300,27 @@ fun UnlockScreen(
                     onValueChange = { password = it },
                     label = { Text(s.masterPassword) },
                     singleLine = true,
-                    leadingIcon = { AppIcon(AppIcons.Lock, null) },
+                    leadingIcon = AppIcons.Lock,
                     visualTransformation = if (show) VisualTransformation.None else PasswordVisualTransformation(),
                     trailingIcon = { PasswordVisibilityToggle(show) { show = !show } },
                     modifier = Modifier.fillMaxWidth(),
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                     keyboardActions = KeyboardActions(onDone = { submit() }),
-                    shape = MaterialTheme.shapes.medium,
+                    shape = AppleWidgetsTheme.componentStyles.controlShape,
                 )
                 Spacer(Modifier.height(16.dp))
                 Button(
                     onClick = { submit() },
                     enabled = !loading,
                     modifier = Modifier.fillMaxWidth().height(48.dp),
-                    shape = MaterialTheme.shapes.medium,
+                    shape = AppleWidgetsTheme.componentStyles.controlShape,
                 ) { Text(s.unlock) }
                 if (canBio) {
                     Spacer(Modifier.height(10.dp))
                     FilledTonalButton(
                         onClick = { runBiometric() },
                         modifier = Modifier.fillMaxWidth().height(48.dp),
-                        shape = MaterialTheme.shapes.medium,
+                        shape = AppleWidgetsTheme.componentStyles.controlShape,
                     ) {
                         AppIcon(AppIcons.Fingerprint, null, Modifier.size(20.dp))
                         Spacer(Modifier.size(8.dp))
@@ -327,8 +331,8 @@ fun UnlockScreen(
                     Spacer(Modifier.height(10.dp))
                     Text(
                         s.biometricUnavailable,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = OinkTheme.textStyles.caption,
+                        color = OinkTheme.colors.text2,
                     )
                 }
                 if (inviteBio) {
@@ -337,8 +341,25 @@ fun UnlockScreen(
                 }
             }
             Spacer(Modifier.height(8.dp))
-            TextButton(onClick = { confirmReset = 1 }) { Text(s.forgotPassword) }
+            TextButton(onClick = {
+                if (hasSecurityQuestion) showVerify = true else confirmReset = 1
+            }) { Text(s.forgotPassword) }
         }
+    }
+
+    if (showVerify) {
+        SecurityQuestionVerifyDialog(
+            repo = repo,
+            onRecovered = { recovered ->
+                showVerify = false
+                onRecovered(recovered)
+            },
+            onFallback = {
+                showVerify = false
+                confirmReset = 1
+            },
+            onDismiss = { showVerify = false },
+        )
     }
 
     if (confirmReset == 1) {
@@ -364,13 +385,247 @@ fun UnlockScreen(
 }
 
 @Composable
+private fun SecurityQuestionVerifyDialog(
+    repo: PasswordRepository,
+    onRecovered: (String) -> Unit,
+    onFallback: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val s = I18n.strings
+    val config = remember { repo.readSecurityQuestion() }
+    var answer by remember { mutableStateOf("") }
+    var error by remember { mutableStateOf<String?>(null) }
+    var loading by remember { mutableStateOf(false) }
+    var cooldown by remember { mutableStateOf(0) }
+    val scope = rememberCoroutineScope()
+
+    LaunchedEffect(cooldown) {
+        while (cooldown > 0) {
+            delay(1000)
+            cooldown -= 1
+        }
+    }
+
+    fun submitVerify() {
+        if (answer.isBlank()) {
+            error = s.errSecurityAnswerBlank
+            return
+        }
+        loading = true
+        scope.launch {
+            val recovered = withContext(Dispatchers.Default) { repo.recoverMasterPassword(answer) }
+            loading = false
+            if (recovered != null) {
+                onRecovered(recovered)
+                return@launch
+            }
+            val remain = repo.securityLockRemainingMs()
+            if (remain > 0) {
+                cooldown = ((remain + 999) / 1000).toInt()
+                error = s.securityTooManyAttempts
+            } else {
+                error = s.errSecurityAnswerWrong
+            }
+        }
+    }
+
+    AlertDialog(
+        onDismissRequest = { if (!loading) onDismiss() },
+        title = { Text(s.securityVerifyTitle) },
+        text = {
+            Column {
+                Text(
+                    s.securityVerifyHint,
+                    style = OinkTheme.textStyles.caption,
+                    color = OinkTheme.colors.text2,
+                )
+                Spacer(Modifier.height(10.dp))
+                Text(
+                    config?.let { s.securityQuestionText(it.questionKey) } ?: "",
+                    style = OinkTheme.textStyles.h4,
+                )
+                Spacer(Modifier.height(10.dp))
+                OutlinedTextField(
+                    value = answer,
+                    onValueChange = { answer = it; error = null },
+                    label = { Text(s.securityAnswerLabel) },
+                    singleLine = true,
+                    isError = error != null,
+                    enabled = !loading && cooldown == 0,
+                    supportingText = {
+                        Column {
+                            if (error != null) {
+                                Text(error!!, color = OinkTheme.colors.danger)
+                            } else if (cooldown == 0) {
+                                Text(
+                                    s.securityAttemptsLeft(repo.securityAttemptsLeft()),
+                                    color = OinkTheme.colors.text2,
+                                )
+                            }
+                        }
+                    },
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { if (!loading && cooldown == 0) submitVerify() }),
+                )
+                if (loading) {
+                    Spacer(Modifier.height(8.dp))
+                    Text(s.processing)
+                }
+                TextButton(
+                    enabled = !loading,
+                    onClick = onFallback,
+                ) { Text(s.securityFallback) }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                enabled = !loading && cooldown == 0,
+                onClick = { submitVerify() },
+            ) { Text(s.securityVerifyBtn) }
+        },
+        dismissButton = { TextButton(enabled = !loading, onClick = onDismiss) { Text(s.cancel) } },
+    )
+}
+
+@Composable
+fun ResetMasterPasswordScreen(
+    repo: PasswordRepository,
+    recovered: String,
+    onDone: () -> Unit,
+    onCancel: () -> Unit,
+) {
+    val s = I18n.strings
+    var password by remember { mutableStateOf("") }
+    var confirm by remember { mutableStateOf("") }
+    var show1 by remember { mutableStateOf(false) }
+    var show2 by remember { mutableStateOf(false) }
+    var loading by remember { mutableStateOf(false) }
+    val snack = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+
+    fun submit() {
+        when {
+            password.length < 4 -> scope.launch { snack.showSnackbar(s.errPasswordShort) }
+            password != confirm -> scope.launch { snack.showSnackbar(s.errPasswordMismatch) }
+            else -> {
+                loading = true
+                scope.launch {
+                    val err = withContext(Dispatchers.Default) {
+                        runCatching { repo.changeMasterPassword(recovered, password) }
+                            .exceptionOrNull()?.message
+                    }
+                    loading = false
+                    if (err != null) snack.showSnackbar(err) else onDone()
+                }
+            }
+        }
+    }
+
+    Scaffold(
+        contentWindowInsets = screenWindowInsets(),
+        snackbarHost = { SnackbarHost(snack) },
+        topBar = {
+            TopAppBar(
+                title = { Text(s.securityResetPwdTitle) },
+                navigationIcon = {
+                    IconButton(onClick = onCancel) { AppIcon(AppIcons.Back, s.cdBack) }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = OinkTheme.colors.bg,
+                ),
+            )
+        },
+    ) { padding ->
+        Column(
+            Modifier.fillMaxSize().padding(padding).padding(24.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            HeroLockBadge()
+            Spacer(Modifier.height(20.dp))
+            Text(s.securityResetPwdTitle, style = OinkTheme.textStyles.h3)
+            Spacer(Modifier.height(8.dp))
+            Text(
+                s.securityResetPwdHint,
+                style = OinkTheme.textStyles.body,
+                color = OinkTheme.colors.text2,
+            )
+            Spacer(Modifier.height(24.dp))
+            SoftCard(modifier = Modifier.fillMaxWidth()) {
+                OutlinedTextField(
+                    value = password,
+                    onValueChange = { password = it },
+                    label = { Text(s.masterPassword) },
+                    singleLine = true,
+                    leadingIcon = AppIcons.Lock,
+                    visualTransformation = if (show1) VisualTransformation.None else PasswordVisualTransformation(),
+                    trailingIcon = { PasswordVisibilityToggle(show1) { show1 = !show1 } },
+                    modifier = Modifier.fillMaxWidth(),
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                    shape = AppleWidgetsTheme.componentStyles.controlShape,
+                    supportingText = {
+                        val strength = PasswordStrengthMeter.score(password)
+                        if (password.isNotEmpty()) {
+                            Text(
+                                when (strength) {
+                                    PasswordStrength.TOO_SHORT -> s.errPasswordShort
+                                    PasswordStrength.WEAK -> s.strengthWeak
+                                    PasswordStrength.MEDIUM -> s.strengthMedium
+                                    PasswordStrength.STRONG -> s.strengthStrong
+                                },
+                                color = when (strength) {
+                                    PasswordStrength.STRONG -> OinkTheme.colors.accent
+                                    PasswordStrength.MEDIUM -> OinkTheme.colors.info
+                                    else -> OinkTheme.colors.danger
+                                },
+                            )
+                        }
+                    },
+                )
+                Spacer(Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = confirm,
+                    onValueChange = { confirm = it },
+                    label = { Text(s.confirmPassword) },
+                    singleLine = true,
+                    leadingIcon = AppIcons.Lock,
+                    visualTransformation = if (show2) VisualTransformation.None else PasswordVisualTransformation(),
+                    trailingIcon = { PasswordVisibilityToggle(show2) { show2 = !show2 } },
+                    modifier = Modifier.fillMaxWidth(),
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { submit() }),
+                    shape = AppleWidgetsTheme.componentStyles.controlShape,
+                )
+                Spacer(Modifier.height(20.dp))
+                Button(
+                    onClick = { submit() },
+                    enabled = !loading,
+                    modifier = Modifier.fillMaxWidth().height(48.dp),
+                    shape = AppleWidgetsTheme.componentStyles.controlShape,
+                ) {
+                    Text(if (loading) s.processing else s.ok)
+                }
+            }
+            Spacer(Modifier.height(16.dp))
+            Text(
+                s.securityResetPwdNote,
+                style = OinkTheme.textStyles.caption,
+                color = OinkTheme.colors.text2,
+            )
+        }
+    }
+}
+
+@Composable
 private fun BiometricInvite(kind: BiometryKind, onEnable: () -> Unit) {
     val s = I18n.strings
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(14.dp),
-        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
-        contentColor = MaterialTheme.colorScheme.onSurface,
+        colors = SurfaceDefaults.surfaceColors(
+            containerColor = OinkTheme.colors.accentSoft.copy(alpha = 0.4f),
+            contentColor = OinkTheme.colors.text,
+        ),
     ) {
         Row(
             modifier = Modifier.padding(12.dp),
@@ -380,22 +635,22 @@ private fun BiometricInvite(kind: BiometryKind, onEnable: () -> Unit) {
                 AppIcons.Fingerprint,
                 contentDescription = null,
                 modifier = Modifier.size(26.dp),
-                tint = MaterialTheme.colorScheme.primary,
+                tint = OinkTheme.colors.accent,
             )
             Column(Modifier.weight(1f).padding(start = 12.dp, end = 8.dp)) {
                 Text(
                     s.biometricInviteTitle(kind),
-                    style = MaterialTheme.typography.titleSmall,
+                    style = OinkTheme.textStyles.label,
                 )
                 Text(
                     s.biometricInviteHint(kind),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = OinkTheme.textStyles.caption,
+                    color = OinkTheme.colors.text2,
                 )
             }
             Button(
                 onClick = onEnable,
-                shape = MaterialTheme.shapes.small,
+                shape = AppleWidgetsTheme.componentStyles.controlShape,
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
             ) { Text(s.enable) }
         }
@@ -416,6 +671,6 @@ fun ConfirmDialog(
         text = { Text(text) },
         confirmButton = { TextButton(onClick = onConfirm) { Text(s.ok) } },
         dismissButton = { TextButton(onClick = onDismiss) { Text(s.cancel) } },
-        shape = MaterialTheme.shapes.large,
+        shape = AppleWidgetsTheme.componentStyles.cardShape,
     )
 }

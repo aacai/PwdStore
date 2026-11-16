@@ -4,6 +4,7 @@ sealed interface Route {
     data object Boot : Route
     data object Setup : Route
     data object Unlock : Route
+    data object ResetPassword : Route
     data object Home : Route
     data object Settings : Route
     data class Detail(val id: String) : Route

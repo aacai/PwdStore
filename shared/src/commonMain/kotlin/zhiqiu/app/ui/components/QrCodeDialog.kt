@@ -11,16 +11,15 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import zhiqiu.app.ui.components.AlertDialog
+import zhiqiu.applewidgets.kmp.basic.ProgressView
+import zhiqiu.applewidgets.kmp.oink.theme.OinkTheme
+import zhiqiu.applewidgets.kmp.basic.Text
+import zhiqiu.app.ui.components.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.alexzhirkevich.qrose.rememberQrCodePainter
@@ -50,12 +49,12 @@ fun QrCodeDialog(
             ) {
                 when {
                     loading -> {
-                        CircularProgressIndicator()
+                        ProgressView()
                         Spacer(Modifier.height(12.dp))
                         Text(s.qrUploading)
                     }
-                    error != null -> Text(error, color = MaterialTheme.colorScheme.error)
-                    tooLong -> Text(s.qrTooLong, color = MaterialTheme.colorScheme.error)
+                    error != null -> Text(error, color = OinkTheme.colors.danger)
+                    tooLong -> Text(s.qrTooLong, color = OinkTheme.colors.danger)
                     !payload.isNullOrEmpty() -> {
                         Image(
                             painter = rememberQrCodePainter(payload),
@@ -69,8 +68,7 @@ fun QrCodeDialog(
                         SelectionContainer {
                             Text(
                                 payload,
-                                style = MaterialTheme.typography.bodySmall,
-                                fontFamily = FontFamily.Monospace,
+                                style = OinkTheme.textStyles.mono,
                                 maxLines = 6,
                                 overflow = TextOverflow.Ellipsis,
                             )

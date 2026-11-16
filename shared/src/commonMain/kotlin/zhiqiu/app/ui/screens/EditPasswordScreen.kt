@@ -11,21 +11,20 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Switch
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
+import zhiqiu.app.ui.components.AlertDialog
+import zhiqiu.app.ui.components.Button
+import zhiqiu.applewidgets.kmp.basic.IconButton
+import zhiqiu.applewidgets.kmp.oink.theme.OinkTheme
+import zhiqiu.app.ui.components.OutlinedTextField
+import zhiqiu.app.ui.components.AppScaffold as Scaffold
+import zhiqiu.applewidgets.kmp.basic.Slider
+import zhiqiu.app.ui.components.AppSnackbarHost as SnackbarHost
+import zhiqiu.app.ui.components.AppSnackbarHostState as SnackbarHostState
+import zhiqiu.applewidgets.kmp.basic.Switch
+import zhiqiu.applewidgets.kmp.basic.Text
+import zhiqiu.app.ui.components.TextButton
+import zhiqiu.app.ui.components.AppTopBar as TopAppBar
+import zhiqiu.app.ui.components.AppTopBarDefaults as TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -51,7 +50,6 @@ import zhiqiu.app.ui.components.IconGlyph
 import zhiqiu.app.ui.components.PasswordVisibilityToggle
 import zhiqiu.app.ui.screenWindowInsets
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditPasswordScreen(
     repo: PasswordRepository,
@@ -83,7 +81,7 @@ fun EditPasswordScreen(
                 title = { Text(if (editId == null) s.addEntry else s.editEntry) },
                 navigationIcon = { IconButton(onClick = onBack) { AppIcon(AppIcons.Back, s.cdBack) } },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
+                    containerColor = OinkTheme.colors.bg,
                 ),
             )
         },
@@ -101,7 +99,7 @@ fun EditPasswordScreen(
                 label = { Text(s.name) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
-                leadingIcon = { IconGlyph(iconKey, Modifier.size(24.dp)) },
+                leadingIcon = AppIcons.forService(iconKey),
                 trailingIcon = {
                     IconButton(onClick = { iconMenu = true }) {
                         AppIcon(AppIcons.Apps, s.cdChangeIcon)
@@ -273,7 +271,7 @@ fun EditPasswordScreen(
             onDismissRequest = { genDialog = false },
             title = { Text(s.generatorSettings) },
             text = {
-                Column {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     PrefSwitch(s.genUppercase, local.uppercase) {
                         local = local.copy(uppercase = it)
                         prefs = local
@@ -303,7 +301,6 @@ fun EditPasswordScreen(
                             repo.writeGeneratorPrefs(local)
                         },
                         valueRange = 4f..20f,
-                        steps = 15,
                     )
                 }
             },
@@ -325,7 +322,7 @@ private fun PrefSwitch(label: String, checked: Boolean, onChange: (Boolean) -> U
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(label, style = MaterialTheme.typography.bodyMedium)
+        Text(label, style = OinkTheme.textStyles.body)
         Switch(checked = checked, onCheckedChange = onChange)
     }
 }

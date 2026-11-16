@@ -14,17 +14,18 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.material3.Button
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
+import zhiqiu.app.ui.components.Button
+import zhiqiu.applewidgets.kmp.basic.Chip
+import zhiqiu.applewidgets.kmp.basic.FloatingActionButton
+import zhiqiu.applewidgets.kmp.basic.FloatingActionButtonDefaults
+import zhiqiu.applewidgets.kmp.basic.IconButton
+import zhiqiu.applewidgets.kmp.oink.theme.OinkTheme
+import zhiqiu.applewidgets.kmp.theme.AppleWidgetsTheme
+import zhiqiu.app.ui.components.OutlinedTextField
+import zhiqiu.app.ui.components.AppScaffold as Scaffold
+import zhiqiu.applewidgets.kmp.basic.Text
+import zhiqiu.app.ui.components.AppTopBar as TopAppBar
+import zhiqiu.app.ui.components.AppTopBarDefaults as TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -45,7 +46,6 @@ import zhiqiu.app.ui.components.IconGlyph
 import zhiqiu.app.ui.components.ThemeToggleIcon
 import zhiqiu.app.ui.screenWindowInsets
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     repo: PasswordRepository,
@@ -88,8 +88,8 @@ fun HomeScreen(
                         Text(s.vault)
                         Text(
                             s.recordCount(entries.size),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = OinkTheme.textStyles.caption,
+                            color = OinkTheme.colors.text2,
                         )
                     }
                 },
@@ -98,16 +98,17 @@ fun HomeScreen(
                     IconButton(onClick = onOpenSettings) { AppIcon(AppIcons.Settings, s.cdSettings) }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
+                    containerColor = OinkTheme.colors.bg,
                 ),
             )
         },
         floatingActionButton = {
             FloatingActionButton(
                 onClick = onAdd,
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary,
-                shape = MaterialTheme.shapes.large,
+                colors = FloatingActionButtonDefaults.colors(
+                    containerColor = OinkTheme.colors.accent,
+                    contentColor = OinkTheme.colors.onAccent,
+                ),
             ) { AppIcon(AppIcons.Add, s.cdAdd) }
         },
     ) { padding ->
@@ -117,27 +118,25 @@ fun HomeScreen(
                 onValueChange = { query = it },
                 label = { Text(s.searchHint) },
                 singleLine = true,
-                leadingIcon = { AppIcon(AppIcons.Search, null) },
+                leadingIcon = AppIcons.Search,
                 modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.medium,
+                shape = AppleWidgetsTheme.componentStyles.controlShape,
             )
             Spacer(Modifier.height(10.dp))
             Row(
                 Modifier.horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                FilterChip(
+                Chip(
+                    text = s.filterAll,
                     selected = category == null,
                     onClick = { category = null },
-                    label = { Text(s.filterAll) },
-                    shape = MaterialTheme.shapes.small,
                 )
                 PasswordCategory.entries.forEach { c ->
-                    FilterChip(
+                    Chip(
+                        text = s.categoryLabel(c),
                         selected = category == c,
                         onClick = { category = if (category == c) null else c },
-                        label = { Text(s.categoryLabel(c)) },
-                        shape = MaterialTheme.shapes.small,
                     )
                 }
             }
@@ -157,10 +156,10 @@ fun HomeScreen(
                     verticalArrangement = Arrangement.Center,
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    AppIcon(AppIcons.Key, null, Modifier.size(48.dp), tint = MaterialTheme.colorScheme.primary)
+                    AppIcon(AppIcons.Key, null, Modifier.size(48.dp), tint = OinkTheme.colors.accent)
                     Spacer(Modifier.height(12.dp))
-                    Text(s.emptyTitle, style = MaterialTheme.typography.titleMedium)
-                    Text(s.emptyHint, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(s.emptyTitle, style = OinkTheme.textStyles.h4)
+                    Text(s.emptyHint, color = OinkTheme.colors.text2)
                 }
                 filtered.isEmpty() -> Column(
                     Modifier.fillMaxSize(),

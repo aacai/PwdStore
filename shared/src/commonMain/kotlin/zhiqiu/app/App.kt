@@ -22,6 +22,7 @@ import zhiqiu.app.ui.Route
 import zhiqiu.app.ui.screens.DetailScreen
 import zhiqiu.app.ui.screens.EditPasswordScreen
 import zhiqiu.app.ui.screens.HomeScreen
+import zhiqiu.app.ui.screens.ResetMasterPasswordScreen
 import zhiqiu.app.ui.screens.SettingsScreen
 import zhiqiu.app.ui.screens.SetupMasterPasswordScreen
 import zhiqiu.app.ui.screens.UnlockScreen
@@ -44,6 +45,7 @@ fun App() {
         )
     }
     var listEpoch by remember { mutableStateOf(0) }
+    var recoveredPassword by remember { mutableStateOf<String?>(null) }
 
     fun toggleThemeQuick() {
         themeMode = when (themeMode) {
@@ -57,6 +59,14 @@ fun App() {
         if (!AppSession.session.isUnlocked) return
         if (!AppLockController.shouldLockNow()) return
         repo.lockNow()
+        recoveredPassword = null
+        route = Route.Unlock
+    }
+
+    /** 放弃密码找回流程：清掉恢复态并重新锁定，回到解锁页。 */
+    fun cancelRecovery() {
+        recoveredPassword = null
+        if (AppSession.session.isUnlocked) repo.lockNow()
         route = Route.Unlock
     }
 
@@ -70,7 +80,7 @@ fun App() {
     }
 
     val canSystemBack = when (route) {
-        is Route.Detail, is Route.Edit, Route.Settings -> true
+        is Route.Detail, is Route.Edit, Route.Settings, Route.ResetPassword -> true
         else -> false
     }
     PlatformBackHandler(enabled = canSystemBack) {
@@ -78,6 +88,7 @@ fun App() {
             is Route.Detail -> route = Route.Home
             is Route.Edit -> route = if (r.id != null) Route.Detail(r.id) else Route.Home
             Route.Settings -> route = Route.Home
+            Route.ResetPassword -> cancelRecovery()
             else -> Unit
         }
     }
@@ -92,9 +103,30 @@ fun App() {
                 Route.Unlock -> UnlockScreen(
                     repo = repo,
                     onUnlocked = { route = Route.Home },
+                    onRecovered = { recovered ->
+                        recoveredPassword = recovered
+                        route = Route.ResetPassword
+                    },
                     onReset = { route = Route.Setup },
                     onToggleTheme = ::toggleThemeQuick,
                 )
+                Route.ResetPassword -> {
+                    val recovered = recoveredPassword
+                    if (recovered == null || !AppSession.session.isUnlocked) {
+                        LaunchedEffect(Unit) { cancelRecovery() }
+                    } else {
+                        ResetMasterPasswordScreen(
+                            repo = repo,
+                            recovered = recovered,
+                            onDone = {
+                                recoveredPassword = null
+                                repo.onManualUnlockSuccess()
+                                route = Route.Home
+                            },
+                            onCancel = ::cancelRecovery,
+                        )
+                    }
+                }
                 Route.Home -> HomeScreen(
                     repo = repo,
                     refreshKey = listEpoch,

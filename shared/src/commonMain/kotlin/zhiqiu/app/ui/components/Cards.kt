@@ -1,7 +1,7 @@
 package zhiqiu.app.ui.components
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,10 +15,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
+import zhiqiu.applewidgets.kmp.basic.Separator
+import zhiqiu.applewidgets.kmp.oink.theme.OinkTheme
+import zhiqiu.applewidgets.kmp.basic.Surface
+import zhiqiu.applewidgets.kmp.basic.SurfaceDefaults
+import zhiqiu.applewidgets.kmp.basic.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -37,9 +38,7 @@ fun SoftCard(
     Surface(
         modifier = modifier.then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
         shape = shape,
-        color = MaterialTheme.colorScheme.surface,
-        tonalElevation = 0.dp,
-        shadowElevation = 0.dp,
+        colors = SurfaceDefaults.surfaceColors(containerColor = OinkTheme.colors.card),
         content = { Column(Modifier.padding(16.dp), content = content) },
     )
 }
@@ -58,21 +57,21 @@ fun EntryListCard(
                 Modifier
                     .size(44.dp)
                     .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primaryContainer),
+                    .background(OinkTheme.colors.accentSoft),
                 contentAlignment = Alignment.Center,
             ) { icon() }
             Spacer(Modifier.size(14.dp))
             Column(Modifier.weight(1f)) {
                 Text(
                     title,
-                    style = MaterialTheme.typography.titleMedium,
+                    style = OinkTheme.textStyles.h4,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(
                     username,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = OinkTheme.textStyles.body,
+                    color = OinkTheme.colors.text2,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -82,7 +81,7 @@ fun EntryListCard(
                     AppIcons.Notes,
                     contentDescription = null,
                     modifier = Modifier.size(18.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    tint = OinkTheme.colors.text2,
                 )
             }
         }
@@ -93,8 +92,8 @@ fun EntryListCard(
 fun SectionLabel(text: String) {
     Text(
         text,
-        style = MaterialTheme.typography.labelLarge,
-        color = MaterialTheme.colorScheme.primary,
+        style = OinkTheme.textStyles.label,
+        color = OinkTheme.colors.accent,
         modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp),
     )
 }
@@ -108,7 +107,7 @@ fun HeroLockBadge(
     val modifier = Modifier
         .size(88.dp)
         .clip(CircleShape)
-        .background(MaterialTheme.colorScheme.primaryContainer)
+        .background(OinkTheme.colors.accentSoft)
         .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
     Box(
         modifier,
@@ -118,7 +117,7 @@ fun HeroLockBadge(
             icon,
             contentDescription = contentDescription,
             modifier = Modifier.size(40.dp),
-            tint = MaterialTheme.colorScheme.primary,
+            tint = OinkTheme.colors.accent,
         )
     }
 }
@@ -128,17 +127,16 @@ fun SettingsSection(title: String, content: @Composable ColumnScope.() -> Unit) 
     Column(Modifier.fillMaxWidth()) {
         Text(
             title,
-            style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.primary,
+            style = OinkTheme.textStyles.label,
+            color = OinkTheme.colors.accent,
             modifier = Modifier.padding(start = 4.dp, bottom = 8.dp),
         )
         Surface(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .border(1.dp, OinkTheme.colors.line, RoundedCornerShape(18.dp)),
             shape = RoundedCornerShape(18.dp),
-            color = MaterialTheme.colorScheme.surface,
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-            tonalElevation = 0.dp,
-            shadowElevation = 0.dp,
+            colors = SurfaceDefaults.surfaceColors(containerColor = OinkTheme.colors.card),
         ) {
             Column(Modifier.padding(vertical = 2.dp), content = content)
         }
@@ -168,18 +166,18 @@ fun SettingRow(
                 modifier = Modifier
                     .size(34.dp)
                     .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)),
+                    .background(OinkTheme.colors.accentSoft.copy(alpha = 0.45f)),
                 contentAlignment = Alignment.Center,
             ) {
-                AppIcon(icon, null, Modifier.size(17.dp), tint = MaterialTheme.colorScheme.primary)
+                AppIcon(icon, null, Modifier.size(17.dp), tint = OinkTheme.colors.accent)
             }
             Column(Modifier.weight(1f)) {
-                Text(title, style = MaterialTheme.typography.bodyLarge)
+                Text(title, style = OinkTheme.textStyles.bodyLarge)
                 if (subtitle != null) {
                     Text(
                         subtitle,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = OinkTheme.textStyles.caption,
+                        color = OinkTheme.colors.text2,
                     )
                 }
             }
@@ -187,10 +185,9 @@ fun SettingRow(
         }
         extra?.invoke()
         if (divider) {
-            HorizontalDivider(
-                modifier = Modifier.padding(start = 62.dp),
-                thickness = 1.dp,
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+            Separator(
+                startIndent = 62.dp,
+                color = OinkTheme.colors.line.copy(alpha = 0.5f),
             )
         }
     }

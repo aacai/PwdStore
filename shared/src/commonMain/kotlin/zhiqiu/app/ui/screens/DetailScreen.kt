@@ -12,16 +12,15 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
+import zhiqiu.applewidgets.kmp.basic.IconButton
+import zhiqiu.applewidgets.kmp.oink.theme.OinkTheme
+import zhiqiu.app.ui.components.AppScaffold as Scaffold
+import zhiqiu.app.ui.components.AppSnackbarHost as SnackbarHost
+import zhiqiu.app.ui.components.AppSnackbarHostState as SnackbarHostState
+import zhiqiu.applewidgets.kmp.basic.Text
+import zhiqiu.app.ui.components.TextButton
+import zhiqiu.app.ui.components.AppTopBar as TopAppBar
+import zhiqiu.app.ui.components.AppTopBarDefaults as TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -43,7 +42,6 @@ import zhiqiu.app.ui.components.PasswordVisibilityToggle
 import zhiqiu.app.ui.components.QrCodeDialog
 import zhiqiu.app.ui.screenWindowInsets
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DetailScreen(
     repo: PasswordRepository,
@@ -71,7 +69,7 @@ fun DetailScreen(
                         IconButton(onClick = onBack) { AppIcon(AppIcons.Back, s.cdBack) }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.background,
+                        containerColor = OinkTheme.colors.bg,
                     ),
                 )
             },
@@ -104,7 +102,7 @@ fun DetailScreen(
                     IconButton(onClick = { confirmDelete = 1 }) { AppIcon(AppIcons.Delete, s.cdDelete) }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
+                    containerColor = OinkTheme.colors.bg,
                 ),
             )
         },
@@ -120,10 +118,10 @@ fun DetailScreen(
                 IconGlyph(entry.iconKey, Modifier.size(40.dp))
                 Spacer(Modifier.padding(8.dp))
                 Column {
-                    Text(entry.title, style = MaterialTheme.typography.headlineSmall)
+                    Text(entry.title, style = OinkTheme.textStyles.h3)
                     Text(
                         s.categoryLabel(entry.categoryEnum()),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = OinkTheme.colors.text2,
                     )
                 }
             }
@@ -138,7 +136,7 @@ fun DetailScreen(
             )
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.weight(1f)) {
-                    Text(s.password, style = MaterialTheme.typography.labelMedium)
+                    Text(s.password, style = OinkTheme.textStyles.caption)
                     SelectionContainer {
                         Text(if (showPwd) entry.password else s.masked)
                     }
@@ -168,7 +166,7 @@ fun DetailScreen(
             }
             if (history.isNotEmpty()) {
                 Spacer(Modifier.height(16.dp))
-                Text(s.historyCount(history.size), style = MaterialTheme.typography.titleMedium)
+                Text(s.historyCount(history.size), style = OinkTheme.textStyles.h4)
                 visibleHistory.forEach { h ->
                     Row(
                         Modifier.fillMaxWidth().padding(vertical = 4.dp),
@@ -179,7 +177,7 @@ fun DetailScreen(
                             Text(s.masked)
                             Text(
                                 BackupManager.formatDateTime(h.changedAt),
-                                style = MaterialTheme.typography.bodySmall,
+                                style = OinkTheme.textStyles.caption,
                             )
                         }
                         IconButton(onClick = {
@@ -245,7 +243,7 @@ private fun FieldRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {
-            Text(label, style = MaterialTheme.typography.labelMedium)
+            Text(label, style = OinkTheme.textStyles.caption)
             SelectionContainer { Text(value) }
         }
         if (copyable) {

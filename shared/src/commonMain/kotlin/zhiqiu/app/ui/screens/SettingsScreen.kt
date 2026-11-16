@@ -8,25 +8,26 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.RadioButton
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Switch
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
+import zhiqiu.app.ui.components.AlertDialog
+import zhiqiu.applewidgets.kmp.basic.IconButton
+import zhiqiu.applewidgets.kmp.theme.AppleWidgetsTheme
+import zhiqiu.applewidgets.kmp.oink.theme.OinkTheme
+import zhiqiu.app.ui.components.OutlinedTextField
+import zhiqiu.applewidgets.kmp.basic.RadioButton
+import zhiqiu.app.ui.components.AppScaffold as Scaffold
+import zhiqiu.applewidgets.kmp.basic.Slider
+import zhiqiu.app.ui.components.AppSnackbarHost as SnackbarHost
+import zhiqiu.app.ui.components.AppSnackbarHostState as SnackbarHostState
+import zhiqiu.applewidgets.kmp.basic.Switch
+import zhiqiu.applewidgets.kmp.basic.Text
+import zhiqiu.app.ui.components.TextButton
+import zhiqiu.app.ui.components.AppTopBar as TopAppBar
+import zhiqiu.app.ui.components.AppTopBarDefaults as TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -35,7 +36,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
@@ -54,6 +55,8 @@ import zhiqiu.app.data.PasswordRepository
 import zhiqiu.app.data.PasswordStrength
 import zhiqiu.app.data.PasswordStrengthMeter
 import zhiqiu.app.data.PlatformActions
+import zhiqiu.app.data.SecurityQuestionConfig
+import zhiqiu.app.data.SecurityQuestions
 import zhiqiu.app.data.StoreFiles
 import zhiqiu.app.data.ThemeMode
 import zhiqiu.app.i18n.AppLanguage
@@ -66,7 +69,6 @@ import zhiqiu.app.ui.components.SettingRow
 import zhiqiu.app.ui.components.SettingsSection
 import zhiqiu.app.ui.screenWindowInsets
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     repo: PasswordRepository,
@@ -83,6 +85,8 @@ fun SettingsScreen(
     var themeDialog by remember { mutableStateOf(false) }
     var languageDialog by remember { mutableStateOf(false) }
     var changePwd by remember { mutableStateOf(false) }
+    var secCfg by remember { mutableStateOf<SecurityQuestionConfig?>(repo.readSecurityQuestion()) }
+    var secDialog by remember { mutableStateOf(false) }
     var exportPreview by remember { mutableStateOf<String?>(null) }
     var importPreview by remember { mutableStateOf<BackupPayload?>(null) }
     var importAskPwd by remember { mutableStateOf(false) }
@@ -143,7 +147,7 @@ fun SettingsScreen(
                     IconButton(onClick = onBack) { AppIcon(AppIcons.Back, s.cdBack) }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
+                    containerColor = OinkTheme.colors.bg,
                 ),
             )
         },
@@ -164,6 +168,12 @@ fun SettingsScreen(
                     onClick = { changePwd = true },
                 )
                 SettingRow(
+                    icon = AppIcons.Key,
+                    title = s.securityQuestionRow,
+                    subtitle = secCfg?.let { s.securityQuestionText(it.questionKey) } ?: s.securityQuestionOff,
+                    onClick = { secDialog = true },
+                )
+                SettingRow(
                     icon = AppIcons.LockOpen,
                     title = s.passwordFree,
                     subtitle = if (auth.enabled) s.daysOf(daysText(auth.duration)) else null,
@@ -178,14 +188,13 @@ fun SettingsScreen(
                             Column(Modifier.padding(start = 48.dp, end = 12.dp, bottom = 10.dp)) {
                                 Text(
                                     s.passwordFreeDuration,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    style = OinkTheme.textStyles.caption,
+                                    color = OinkTheme.colors.text2,
                                 )
                                 Slider(
                                     value = (auth.duration / 24).toFloat().coerceIn(0.5f, 7f),
                                     onValueChange = { save(auth.copy(duration = (it * 2).toInt() / 2f * 24.0)) },
                                     valueRange = 0.5f..7f,
-                                    steps = 12,
                                 )
                             }
                         }
@@ -370,7 +379,21 @@ fun SettingsScreen(
     }
 
     if (changePwd) {
-        ChangeMasterPasswordDialog(repo, snack) { changePwd = false }
+        ChangeMasterPasswordDialog(repo, snack) {
+            changePwd = false
+            secCfg = repo.readSecurityQuestion()
+        }
+    }
+    if (secDialog) {
+        SecurityQuestionSetupDialog(
+            repo = repo,
+            current = secCfg,
+            snack = snack,
+            onDismiss = {
+                secDialog = false
+                secCfg = repo.readSecurityQuestion()
+            },
+        )
     }
 
     exportPreview?.let { text ->
@@ -379,7 +402,7 @@ fun SettingsScreen(
             title = { Text(s.exportPreview) },
             text = {
                 SelectionContainer {
-                    Text(text, fontFamily = FontFamily.Monospace)
+                    Text(text, style = OinkTheme.textStyles.mono)
                 }
             },
             confirmButton = {
@@ -572,7 +595,7 @@ fun SettingsScreen(
             text = {
                 Column {
                     Text("${s.version} ${AppInfo.VERSION}")
-                    Text(s.aboutBody, style = MaterialTheme.typography.bodyMedium)
+                    Text(s.aboutBody, style = OinkTheme.textStyles.body)
                 }
             },
             confirmButton = {
@@ -586,8 +609,8 @@ fun SettingsScreen(
 private fun ValueText(text: String) {
     Text(
         text,
-        style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        style = OinkTheme.textStyles.body,
+        color = OinkTheme.colors.text2,
     )
 }
 
@@ -637,6 +660,7 @@ private fun ChangeMasterPasswordDialog(
     var confirm by remember { mutableStateOf("") }
     var show by remember { mutableStateOf(false) }
     var loading by remember { mutableStateOf(false) }
+    val hadSecurity = remember { repo.readSecurityQuestion() != null }
     val scope = rememberCoroutineScope()
     AlertDialog(
         onDismissRequest = { if (!loading) onDismiss() },
@@ -701,7 +725,7 @@ private fun ChangeMasterPasswordDialog(
                                 loading = false
                                 if (err != null) snack.showSnackbar(err)
                                 else {
-                                    snack.showSnackbar(s.masterChanged)
+                                    snack.showSnackbar(if (hadSecurity) s.securityStaleNote else s.masterChanged)
                                     onDismiss()
                                 }
                             }
@@ -717,4 +741,116 @@ private fun ChangeMasterPasswordDialog(
 private fun daysText(durationHours: Double): String {
     val days = durationHours / 24
     return if (days == days.toLong().toDouble()) days.toLong().toString() else days.toString()
+}
+
+@Composable
+private fun SecurityQuestionSetupDialog(
+    repo: PasswordRepository,
+    current: SecurityQuestionConfig?,
+    snack: SnackbarHostState,
+    onDismiss: () -> Unit,
+) {
+    val s = I18n.strings
+    var selected by remember { mutableStateOf(current?.questionKey ?: SecurityQuestions.presetKeys.first()) }
+    var answer by remember { mutableStateOf("") }
+    var saving by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    AlertDialog(
+        onDismissRequest = { if (!saving) onDismiss() },
+        title = { Text(s.securitySetupTitle) },
+        text = {
+            Column(
+                Modifier
+                    .heightIn(max = 420.dp)
+                    .verticalScroll(rememberScrollState()),
+            ) {
+                Text(
+                    s.securitySetupHint,
+                    style = OinkTheme.textStyles.caption,
+                    color = OinkTheme.colors.text2,
+                )
+                if (current != null) {
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        s.securityReplaceHint,
+                        style = OinkTheme.textStyles.caption,
+                        color = OinkTheme.colors.text2,
+                    )
+                }
+                Spacer(Modifier.height(8.dp))
+                SecurityQuestions.presetKeys.forEach { key ->
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .clip(AppleWidgetsTheme.componentStyles.controlShape)
+                            .clickable(enabled = !saving) { selected = key }
+                            .padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        RadioButton(selected = selected == key, onClick = { selected = key })
+                        Text(s.securityQuestionText(key), style = OinkTheme.textStyles.body)
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+                val answerLen = answer.trim().length
+                val answerTooShort = answer.isNotBlank() && answerLen < PasswordRepository.SECURITY_MIN_ANSWER_LENGTH
+                OutlinedTextField(
+                    value = answer,
+                    onValueChange = { answer = it },
+                    label = { Text(s.securityAnswerLabel) },
+                    singleLine = true,
+                    enabled = !saving,
+                    isError = answerTooShort,
+                    supportingText = {
+                        Text(
+                            if (answerTooShort) s.errSecurityAnswerTooShort else s.securityAnswerHint,
+                            color = if (answerTooShort) OinkTheme.colors.danger else OinkTheme.colors.text2,
+                        )
+                    },
+                )
+                if (saving) {
+                    Spacer(Modifier.height(8.dp))
+                    Text(s.processing)
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                enabled = !saving && answer.trim().length >= PasswordRepository.SECURITY_MIN_ANSWER_LENGTH,
+                onClick = {
+                    scope.launch {
+                        saving = true
+                        val err = withContext(Dispatchers.Default) {
+                            runCatching { repo.writeSecurityQuestion(selected, answer) }
+                                .exceptionOrNull()?.message
+                        }
+                        saving = false
+                        if (err != null) snack.showSnackbar(err)
+                        else {
+                            snack.showSnackbar(s.securitySaved)
+                            onDismiss()
+                        }
+                    }
+                },
+            ) { Text(s.save) }
+        },
+        dismissButton = {
+            if (current != null) {
+                TextButton(
+                    enabled = !saving,
+                    onClick = {
+                        scope.launch {
+                            saving = true
+                            withContext(Dispatchers.Default) { repo.clearSecurityQuestion() }
+                            saving = false
+                            snack.showSnackbar(s.securityCleared)
+                            onDismiss()
+                        }
+                    },
+                ) { Text(s.securityClearBtn) }
+            } else {
+                TextButton(enabled = !saving, onClick = onDismiss) { Text(s.cancel) }
+            }
+        },
+    )
 }

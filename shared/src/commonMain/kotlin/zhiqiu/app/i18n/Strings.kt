@@ -46,6 +46,30 @@ class Strings(private val zh: Boolean) {
     val resetConfirmTitle = if (zh) "再次确认" else "Confirm again"
     val resetConfirmText = if (zh) "此操作无法撤销，确定删除全部数据？" else "This cannot be undone. Delete all data?"
 
+    // 密保问题找回主密码
+    val securityQuestionRow = if (zh) "密保问题" else "Security question"
+    val securityQuestionOff = if (zh) "未设置，设置后忘记主密码可凭答案找回" else "Not set — lets you recover a forgotten master password"
+    val securitySetupTitle = if (zh) "设置密保问题" else "Set up security question"
+    val securitySetupHint = if (zh) "选择一个问题并记住答案：验证答案通过后可直接设置新主密码。答案遗忘后无法找回。" else "Pick a question and remember your answer: verifying it lets you set a new master password. A forgotten answer can't be recovered."
+    val securityAnswerLabel = if (zh) "你的答案" else "Your answer"
+    val securityAnswerHint = if (zh) "答案不区分大小写，前后空格会自动忽略" else "Answers ignore case and surrounding spaces"
+    val securitySaved = if (zh) "密保问题已设置" else "Security question saved"
+    val securityCleared = if (zh) "密保问题已清除" else "Security question cleared"
+    val securityClearBtn = if (zh) "清除" else "Remove"
+    val securityReplaceHint = if (zh) "重新设置会覆盖当前密保问题" else "Setting a new one replaces the current question"
+    val errSecurityAnswerBlank = if (zh) "答案不能为空" else "Answer can't be empty"
+    val errSecurityAnswerTooShort = if (zh) "答案至少 2 个字符" else "Answer needs at least 2 characters"
+    val errSecurityAnswerWrong = if (zh) "答案不正确" else "Incorrect answer"
+    val securityVerifyTitle = if (zh) "验证身份" else "Verify your identity"
+    val securityVerifyHint = if (zh) "回答密保问题以重置主密码" else "Answer your security question to reset the master password"
+    val securityVerifyBtn = if (zh) "验证并重置" else "Verify & reset"
+    val securityFallback = if (zh) "答不上来？清除全部数据并重新开始" else "Can't answer? Erase all data and start over"
+    val securityTooManyAttempts = if (zh) "错误次数过多，请稍后再试" else "Too many attempts — try again in a moment"
+    val securityResetPwdTitle = if (zh) "设置新主密码" else "Set a new master password"
+    val securityResetPwdHint = if (zh) "身份验证已通过，请设置新的主密码" else "Identity verified. Choose a new master password."
+    val securityResetPwdNote = if (zh) "新主密码生效后，原密保问题将失效，需要在设置中重新设置。" else "Once the new master password is applied, the old security question is cleared — set up a new one in Settings."
+    val securityStaleNote = if (zh) "主密码已修改，密保问题需重新设置" else "Master password changed — set up your security question again"
+
     val vault = if (zh) "密码库" else "Vault"
     val searchHint = if (zh) "搜索名称/用户名" else "Search name or username"
     val filterAll = if (zh) "全部" else "All"
@@ -232,6 +256,21 @@ class Strings(private val zh: Boolean) {
         "other" -> if (zh) "其他" else "Other"
         else -> IconCatalog.nameOf(key)
     }
+
+    fun securityQuestionText(key: String): String = when (key) {
+        "birth_city" -> if (zh) "您的出生城市是？" else "In what city were you born?"
+        "mother_name" -> if (zh) "您母亲的名字是？" else "What is your mother's name?"
+        "first_pet" -> if (zh) "您的第一只宠物叫什么？" else "What was your first pet's name?"
+        "first_school" -> if (zh) "您就读的第一所学校是？" else "What was the name of your first school?"
+        "first_teacher" -> if (zh) "您第一位老师的名字是？" else "What was your first teacher's name?"
+        "childhood_friend" -> if (zh) "您童年最好朋友的名字是？" else "What was your childhood best friend's name?"
+        "favorite_food" -> if (zh) "您最喜欢的食物是？" else "What is your favorite food?"
+        "favorite_movie" -> if (zh) "您最喜欢的电影是？" else "What is your favorite movie?"
+        else -> key
+    }
+
+    fun securityAttemptsLeft(count: Int): String =
+        if (zh) "还可尝试 $count 次" else "$count attempts left"
 }
 
 enum class AppLanguage {
